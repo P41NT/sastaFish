@@ -18,6 +18,7 @@ public:
         uint8_t castlingState;
         Square enPassantSquare;
         Color currentPlayer;
+        bool isInCheck;
     };
 
     struct Move {

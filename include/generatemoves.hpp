@@ -22,15 +22,11 @@ namespace moveGen {
     void preprocessbishopMasks();
     void preprocessrookMasks();
 
-    bb genRookAttacks(bb friendly, bb occupied, Square sq);
-    bb genBishopAttacks(bb friendly, bb occupied, Square sq);
-    bb genQueenAttacks(bb friendly, bb occupied, Square sq);
-
-    bb getKnightAttacks(bb friendly, Square sq);
-    bb getKingAttacks(bb friendly, Square sq);
+    bb genBishopMask(bb occupied, Square sq);
+    bb genRookMask(bb occupied, Square sq);
 
     bool isSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
 
-    // void genPsuedoLegalMoves(Board &board, std::vector<Board::Move> &psuedolegal);
+    void genPsuedoLegalMoves(Board &board, std::vector<Board::Move> &psuedoLegal);
     void genLegalMoves(Board &board, std::vector<Board::Move> &legal);
 }

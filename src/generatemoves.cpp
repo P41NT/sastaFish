@@ -1,4 +1,5 @@
 #include "../include/generatemoves.hpp"
+#include <iostream>
 
 namespace moveGen{
     bb knightAttackTable[64];
@@ -90,41 +91,7 @@ namespace moveGen{
         preprocessbishopMasks();
     }
 
-    inline bb getKnightAttacks(bb friendly, Square sq) {
-        return knightAttackTable[sq] & (~friendly);
-    }
-
-    inline bb getKingAttacks(bb friendly, Square sq) {
-        return kingAttackTable[sq] & (~friendly);
-    }
-
-    bb genRookAttacks(bb friendly, bb occupied, Square sq) {
-        bb s = 0ull;
-        s = bitboard::setbit(s, sq);
-        int row = sq / 8; int col = sq % 8;
-
-        bb occupiedFlip = bitboard::flipHorizontal(occupied);
-        bb sFlip = bitboard::flipHorizontal(s);
-        bb sFlipV = bitboard::flipVertical(s);
-
-        bb occupiedV = occupied & verticalMask[col];
-        bb occupiedFlipV = bitboard::flipVertical(occupiedV);
-
-        bb right = (occupied ^ (occupied - 2 * s)) & horizontalMask[row];
-        bb left = bitboard::flipHorizontal((occupiedFlip ^ (occupiedFlip - 2 * sFlip)) 
-                & horizontalMask[row]);
-
-        bb bottom = (occupiedV) ^ (occupiedV - 2 * s) & verticalMask[col];
-
-        bb top = bitboard::flipVertical(occupiedFlipV ^ (occupiedFlipV - 2 * sFlipV) 
-                & verticalMask[col]);
-        
-        bb finalBB = right | left | top | bottom;
-        bb actualFinal = finalBB & (~friendly);
-        return actualFinal;
-    }
-
-    bb genBishopAttacks(bb friendly, bb occupied, Square sq) {
+    bb genBishopMask(bb occupied, Square sq) {
         bb s = 0ull;
         s = bitboard::setbit(s, sq);
 
@@ -149,16 +116,33 @@ namespace moveGen{
         bb topRight = bitboard::flipVertical(occupiedDV ^ (occupiedDV - 2 * sV)) & diagMask;
         bb topLeft =  bitboard::flipVertical(occupiedAV ^ (occupiedAV - 2 * sV)) & antiMask;
 
-        bb finalBitboard = bottomLeft | bottomRight | topRight | topLeft;
-        bb finalBitboardRemovedFriendlies = finalBitboard & (~friendly);
-
-        return finalBitboardRemovedFriendlies;
+        return bottomLeft | bottomRight | topRight | topLeft;
     }
 
-    bb genQueenAttacks(bb friendly, bb occupied, Square sq) {
-        return genBishopAttacks(friendly, occupied, sq) | genRookAttacks(friendly, occupied, sq);
+    bb genRookMask(bb occupied, Square sq) {
+        bb s = 0ull;
+        s = bitboard::setbit(s, sq);
+        int row = sq / 8; int col = sq % 8;
+
+        bb occupiedFlip = bitboard::flipHorizontal(occupied);
+        bb sFlip = bitboard::flipHorizontal(s);
+        bb sFlipV = bitboard::flipVertical(s);
+
+        bb occupiedV = occupied & verticalMask[col];
+        bb occupiedFlipV = bitboard::flipVertical(occupiedV);
+
+        bb right = (occupied ^ (occupied - 2 * s)) & horizontalMask[row];
+        bb left = bitboard::flipHorizontal((occupiedFlip ^ (occupiedFlip - 2 * sFlip)) 
+                & horizontalMask[row]);
+
+        bb bottom = (occupiedV) ^ (occupiedV - 2 * s) & verticalMask[col];
+
+        bb top = bitboard::flipVertical(occupiedFlipV ^ (occupiedFlipV - 2 * sFlipV) 
+                & verticalMask[col]);
+        
+        return top | bottom | left | right;
     }
-    
+
     bool isSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col) {
         bb squareBB = bitboard::setbit(0ull, sq);
         bb occupied = boards[0][6] | boards[1][6];
@@ -169,118 +153,114 @@ namespace moveGen{
         if (col == Color::BLACK && whitePawnAttacks(squareBB, boards[BLACK][PAWN])) return true;
         else if (col == Color::WHITE && whitePawnAttacks(squareBB, boards[WHITE][PAWN])) return true;
 
+        bb bishopMask = genBishopMask(occupied, sq) & (~boards[col][6]);
+        bb rookMask = genRookMask(occupied, sq) & (~boards[col][6]);
+
         if (boards[col][KING] & kingAttackTable[sq])  return true;
         if (boards[col][KNIGHT] & knightAttackTable[sq]) return true;
-        if (boards[col][BISHOP] & genBishopAttacks(boards[col][6], occupied, sq)) return true;
-        if (boards[col][ROOK] & genRookAttacks(boards[col][6], occupied, sq)) return true;
+        if (boards[col][BISHOP] & bishopMask) return true;
+        if (boards[col][ROOK] & rookMask) return true;
 
         return false;
     }
 
-    void genLegalMoves(Board &board, std::vector<Board::Move> &legal) {
+    int countSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col) {
+        bb squareBB = bitboard::setbit(0ull, sq);
+        bb occupied = boards[0][6] | boards[1][6];
+
+        // bitboard::printBitboard(occupied);
+
+        occupied &= (~squareBB);
+        if (col == Color::BLACK && whitePawnAttacks(squareBB, boards[BLACK][PAWN])) return true;
+        else if (col == Color::WHITE && whitePawnAttacks(squareBB, boards[WHITE][PAWN])) return true;
+
+        bb bishopMask = genBishopMask(occupied, sq) & (~boards[col][6]);
+        bb rookMask = genRookMask(occupied, sq) & (~boards[col][6]);
+
+        int answer = 0;
+        if (boards[col][KING] & kingAttackTable[sq])  answer++;
+        if (boards[col][KNIGHT] & knightAttackTable[sq]) answer++;
+        if (boards[col][BISHOP] & bishopMask) answer++;
+        if (boards[col][ROOK] & rookMask) answer++;
+
+        return answer;
+    }
+
+    void genLegalMoves(Board &board, std::vector<Board::Move> &psuedoLegal, std::vector<Board::Move> &legal) {
+        bool isInCheck = board.gameState.isInCheck;
+        for (auto &move : psuedoLegal) {
+        }
+    }
+
+    void genPsuedoLegalMoves(Board &board, std::vector<Board::Move> &psuedoLegal) {
         Color side = board.gameState.currentPlayer;
-        Color opps = board.gameState.currentPlayer;
+        Color opps = static_cast<Color>(static_cast<int>(side) ^ 1);
         bb occupied = board.bitboards[0][6] | board.bitboards[1][6];
+
         bb temp;
 
         bb friendly = board.bitboards[side][6];
         bb notfriendly = board.bitboards[opps][6];
 
-        // generate knight moves 
-        temp = board.bitboards[side][KNIGHT];
-        Board::Piece currPiece{KNIGHT, side};
-        while (temp) {
-            Square from = bitboard::getLsbPop(temp);
+        // generate non-pawn moves
+        for (PieceType p = KNIGHT; p != N_PIECES; p = static_cast<PieceType>(static_cast<int>(p) + 1)) {
+            std::cout << (int)p << std::endl;
+            temp = board.bitboards[side][p];
+            Board::Piece currPiece{p, side};
+            while (temp) {
+                Square from = bitboard::getLsbPop(temp);
+                bb attackMap;
 
-            bb knightAttacks = getKnightAttacks(friendly, from);
-            while (knightAttacks) {
-                Square to = bitboard::getLsbPop(knightAttacks);
-                bool isCapture = bitboard::getBit(notfriendly, to);
-                legal.push_back({currPiece, from, to, isCapture});
+                switch(p) {
+                    case KNIGHT: attackMap = knightAttackTable[from]; break;
+                    case BISHOP: attackMap = genBishopMask(occupied, from); break;
+                    case ROOK: attackMap = genRookMask(occupied, from); break;
+                    case QUEEN:
+                        attackMap = genBishopMask(occupied, from) | genRookMask(occupied, from);
+                        break;
+                    case KING: attackMap = kingAttackTable[from]; break;
+                    case PAWN: break;
+                    case N_PIECES: break;
+                }
+
+                attackMap = attackMap & (~friendly);
+                bitboard::printBitboard(notfriendly);
+
+                while (attackMap) {
+                    Square to = bitboard::getLsbPop(attackMap);
+                    bool isCapture = bitboard::getBit(notfriendly, to);
+                    psuedoLegal.push_back({currPiece, from, to, isCapture});
+                }
             }
         }
-        // generate bishop moves 
-        temp = board.bitboards[side][BISHOP];
-        currPiece.piece = BISHOP;
-        while (temp) {
-            Square from = bitboard::getLsbPop(temp);
-            bb bishopAttacks = genBishopAttacks(board.bitboards[side][6], occupied, from);
-            while (bishopAttacks) {
-                Square to = bitboard::getLsbPop(bishopAttacks);
-                bb temp = bitboard::setbit(0ull, to);
-                bool isCapture = bitboard::getBit(board.bitboards[side ^ 1][6], to);
-                legal.push_back({currPiece, from, to, isCapture});
-            }
-        }
-        // generate rook moves
-        temp = board.bitboards[side][ROOK];
-        currPiece.piece = ROOK;
-        while (temp) {
-            Square from = bitboard::getLsbPop(temp);
-            bb rookAttacks = genRookAttacks(board.bitboards[side][6], occupied, from);
-            while (rookAttacks) {
-                Square to = bitboard::getLsbPop(rookAttacks);
-                bool isCapture = bitboard::getBit(board.bitboards[side ^ 1][6], to);
-                legal.push_back({currPiece, from, to, isCapture});
-            }
-        }
-        // generate queen moves
-        temp = board.bitboards[side][QUEEN];
-        currPiece.piece = QUEEN;
-        while (temp) {
-            Square from = bitboard::getLsbPop(temp);
-            bb queenAttacks = genQueenAttacks(board.bitboards[side][6], occupied, from);
-            while (queenAttacks) {
-                Square to = bitboard::getLsbPop(queenAttacks);
-                bool isCapture = bitboard::getBit(board.bitboards[side ^ 1][6], to);
-                legal.push_back({currPiece, from, to, isCapture});
-            }
-        }
-        // generate king moves 
-        temp = board.bitboards[side][KING];
-        currPiece.piece = KING;
-        while (temp) {
-            Square from = bitboard::getLsbPop(temp);
-            bb kingAttacks = getKingAttacks(board.bitboards[side][6], from);
-            while (kingAttacks) {
-                Square to = bitboard::getLsbPop(kingAttacks);
-                bool isCapture = bitboard::getBit(board.bitboards[side ^ 1][6], to);
-                legal.push_back({currPiece, from, to, isCapture, false});
-            }
-        }
+
         // generate pawn moves
-        currPiece.piece = PAWN;
-        if (side == WHITE) {
-            temp = board.bitboards[WHITE][PAWN];
-            while (temp) {
-                Square from = bitboard::getLsbPop(temp);
-                bb pawnMask = bitboard::setbit(0ull, from);
-                bb pawnPush = whitePawnPush(pawnMask, occupied);
-                while (pawnPush) {
-                    Square to = bitboard::getLsbPop(pawnPush);
-                    legal.push_back({currPiece, from, to, false, to >= A8 && to <= H8 });
-                }
-                bb pawnAttack = whitePawnAttacks(pawnMask, board.bitboards[BLACK][6]);
-                while (pawnAttack) {
-                    Square to = bitboard::getLsbPop(pawnAttack);
-                    legal.push_back({currPiece, from, to, true, to >= A8 && to <= H8});
-                }
+        temp = board.bitboards[side][PAWN];
+        Board::Piece currPiece{PAWN, side};
+        while (temp) {
+            Square from = bitboard::getLsbPop(temp);
+            bb pawnMask = bitboard::setbit(0ull, from);
+            bb pawnPush, pawnAttack;
+            bb promotionRange;
+
+            switch (side) {
+                case WHITE: 
+                    pawnPush = whitePawnPush(pawnMask, occupied); 
+                    pawnAttack = whitePawnAttacks(pawnMask, notfriendly);
+                    promotionRange = horizontalMask[RANK8];
+                    break;
+                case BLACK: 
+                    pawnPush = blackPawnAttacks(pawnMask, occupied); break;
+                    pawnAttack = blackPawnAttacks(pawnMask, notfriendly);
+                    promotionRange = horizontalMask[RANK1];
+                    break;
+                default: break;
             }
-        }
-        else {
-            temp = board.bitboards[BLACK][PAWN];
-            while (temp) {
-                Square from = bitboard::getLsbPop(temp);
-                bb pawnMask = bitboard::setbit(0ull, from);
-                bb pawnPush = blackPawnPush(pawnMask, occupied);
-                while (pawnPush) {
-                    Square to = bitboard::getLsbPop(pawnPush);
-                    legal.push_back({currPiece, from, to, false, to >= A8 && to <= H8 });
-                }
-                bb pawnAttack = blackPawnAttacks(pawnMask, board.bitboards[BLACK][6]);
-                while (pawnAttack) {
-                    Square to = bitboard::getLsbPop(pawnAttack);
-                    legal.push_back({currPiece, from, to, true, to >= A8 && to <= H8});
+            for (bb pawnBB : {pawnPush, pawnAttack}) {
+                while (pawnBB) {
+                    Square to = bitboard::getLsbPop(pawnBB);
+                    psuedoLegal.push_back({currPiece, from, to, false, 
+                            (bool)(bitboard::setbit(0ull, to) & promotionRange)});
                 }
             }
         }
