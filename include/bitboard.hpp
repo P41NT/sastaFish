@@ -43,4 +43,6 @@ namespace bitboard {
 
     Square getLsb(bb in);
     Square getLsbPop(bb &in);
+
+    inline int numBits(bb in) { return __builtin_popcount(in); }
 };

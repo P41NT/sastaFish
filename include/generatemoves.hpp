@@ -25,8 +25,9 @@ namespace moveGen {
     bb genBishopMask(bb occupied, Square sq);
     bb genRookMask(bb occupied, Square sq);
 
-    bool isSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
+    Square isSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
+    int countSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
 
-    void genPsuedoLegalMoves(Board &board, std::vector<Board::Move> &psuedoLegal);
-    void genLegalMoves(Board &board, std::vector<Board::Move> &legal);
+    void genPsuedoLegalMoves(Board &board, std::vector<Move> &psuedoLegal);
+    void genLegalMoves(Board &board, std::vector<Move> &legal);
 }

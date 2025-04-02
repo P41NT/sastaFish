@@ -2,38 +2,31 @@
 
 #include "utils.hpp"
 #include "bitboard.hpp"
+#include "move.hpp"
 #include <array>
 #include <string>
 #include <vector>
 
+struct Piece {
+    PieceType pieceType;
+    Color color;
+};
 
 class Board {
 public:
-    struct Piece {
-        PieceType piece;
-        Color color;
-    };
-
-    struct GameState {
+    class GameState {
+        public:
         uint8_t castlingState;
         Square enPassantSquare;
         Color currentPlayer;
         bool isInCheck;
+        Piece capturedPiece;
+        Move lastMove;
     };
 
-    struct Move {
-        Piece piece;
-        Square from;
-        Square to;
-
-        bool isCapture;
-        bool isPromotion;
-
-        GameState oldState;
-        GameState newState;
-    };
     GameState gameState;
     std::array<std::array<bb, 7>, 2> bitboards;
+    std::array<Piece, 64> board;
 
     Board(std::string FEN);
     Board();
@@ -42,9 +35,12 @@ public:
     std::vector<Move> psuedoLegalMoves();
     std::vector<Move> legalMoves();
 
+    inline std::string printPiece(Piece p);
+
     void makeMove(Move move);
     void unMakeMove(Move move);
 
     void printBoard();
-    static void printMove(Move &mv);
+    static void printMove(Board &b, Move &mv);
 };
+
