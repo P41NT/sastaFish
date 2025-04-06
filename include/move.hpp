@@ -8,8 +8,8 @@
  * 1111 -> promote capture queen
  * 1001 -> en passant
  *
- * 0100 -> promotions
- * 0101 -> promote to knight
+ * 0100 -> promote to knight 
+ * 0101 -> promote to bishop 
  * 0110 -> promote to rook
  * 0111 -> promote to queen
  *
@@ -22,6 +22,11 @@ enum MoveFlag : int {
     CAPTURE = 0b1000,
     PROMOTE = 0b0100,
 
+    PROMOTE_B = 0b0100,
+    PROMOTE_N = 0b0101,
+    PROMOTE_R = 0b0110,
+    PROMOTE_Q = 0b0111,
+
     CASTLE = 0b0010,
     QUIET = 0b0000,
 
@@ -30,26 +35,33 @@ enum MoveFlag : int {
 };
 
 class Move {
-private:
-    uint16_t move;
 public:
+    uint16_t move;
     inline Move() : move(0) {}
 
-    inline Move(Square from, Square to) {
-        move = ((uint8_t)from << 6) | (uint8_t)to;
-    }
+    inline Move(Square from, Square to) : move((uint8_t)from << 6 | (uint8_t)to) {}
 
-    inline Move(Square from, Square to, uint8_t flags) {
-        move = (flags << 12) | ((uint8_t)from << 6) | ((uint8_t)to);
-    }
+    inline Move(Square from, Square to, uint8_t flags) : 
+        move((flags << 12) | ((uint8_t)from << 6) | ((uint8_t)to)) { }
 
     inline bool isCapture() const { return (move >> 12 & 0b1000); }
     inline bool isPromotion() const { return (move >> 12 & 0b0100); }
+    inline bool isCastle() const { return ((move >> 12) == CASTLE_KINGSIDE || (move >> 12) == CASTLE_QUEENSIDE); }
+    inline bool isEnPassant() const { return ((move >> 12) == MoveFlag::EN_PASSANT); }
+
+    inline PieceType promotionPiece() const {
+        switch (move >> 12) {
+            case PROMOTE_B: return BISHOP; break;
+            case PROMOTE_N: return KNIGHT; break;
+            case PROMOTE_R: return ROOK; break;
+            case PROMOTE_Q: return QUEEN; break;
+            default: return PAWN;
+        }
+    }
 
     inline Square from() const { return (Square)((move >> 6) & 0b111111); }
     inline Square to() const { return (Square)(move & 0b111111); }
 
-    void operator=(Move other) { move = other.move; }
     bool operator==(Move &other) const { return this->move == other.move; }
     bool operator!=(Move &other) const { return this->move == other.move; }
 };
