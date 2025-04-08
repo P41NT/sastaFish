@@ -4,6 +4,8 @@
 #include "bitboard.hpp"
 #include "move.hpp"
 #include <array>
+#include <cstdint>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -12,25 +14,26 @@ struct Piece {
     Color color;
 };
 
-class Board {
-public:
-    class GameState {
-        public:
-        uint8_t castlingState;
-        Square enPassantSquare;
-        Color currentPlayer;
-        bool isInCheck;
-        Piece capturedPiece;
-        Move lastMove;
-    };
+struct GameState {
+    uint8_t castlingState;
+    Square enPassantSquare;
+    Color currentPlayer;
+    bool isInCheck;
+};
 
-    GameState gameState;
+class Board {
+public: 
+    std::stack<Move> moves;
+    std::stack<Piece> captured;
+    std::stack<GameState> gameStates;
+
+    GameState currState;
+
     std::array<std::array<bb, 7>, 2> bitboards;
     std::array<Piece, 64> board;
 
     Board(std::string FEN);
     Board();
-    ~Board();
 
     std::vector<Move> psuedoLegalMoves();
     std::vector<Move> legalMoves();

@@ -1,5 +1,4 @@
 #include "../include/generatemoves.hpp"
-#include <iostream>
 
 namespace moveGen{
     bb knightAttackTable[64];
@@ -197,7 +196,7 @@ namespace moveGen{
         std::vector<Move> psuedoLegal;
         genPsuedoLegalMoves(board, psuedoLegal);
 
-        Color side = board.gameState.currentPlayer;
+        Color side = board.currState.currentPlayer;
         Color opps = static_cast<Color>(static_cast<int>(side) ^ 1);
 
         bb kingBoard = board.bitboards[side][KING];
@@ -205,7 +204,7 @@ namespace moveGen{
 
         bb occupied = board.bitboards[WHITE][6] | board.bitboards[BLACK][6];
 
-        if (board.gameState.isInCheck) {
+        if (board.currState.isInCheck) {
             int countCheck = countSquareAttacked(board.bitboards, kingSquare, opps);
             if (countCheck == 1) {
                 Square attacker = isSquareAttacked(board.bitboards, kingSquare, opps);
@@ -244,7 +243,7 @@ namespace moveGen{
         else {
             for (auto move : psuedoLegal) {
                 if (move.isCastle()) {
-                    if (board.gameState.currentPlayer == WHITE) {
+                    if (board.currState.currentPlayer == WHITE) {
                         if (move.move == MoveFlag::CASTLE_KINGSIDE) {
                             if (isSquareAttacked(board.bitboards, F1, BLACK) ||
                                     isSquareAttacked(board.bitboards, G1, BLACK))
@@ -274,20 +273,16 @@ namespace moveGen{
                 }
                 else if (move.isEnPassant()) {
                     board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, board.gameState.enPassantSquare);
+                    board.bitboards[side][6] ^= bitboard::setbit(0ull, board.currState.enPassantSquare);
 
                     bb attackbb;
-                    Square attackSquare = board.gameState.enPassantSquare;
-                    if (board.gameState.currentPlayer == WHITE) {
+                    Square attackSquare = board.currState.enPassantSquare;
+                    if (board.currState.currentPlayer == WHITE) 
                         attackSquare = static_cast<Square>(static_cast<int>(attackSquare) - 8);
-                        // attackbb = bitboard::shiftSouth(bitboard::setbit(0ull, board.gameState.enPassantSquare));
-                    }
-                    else {
+                    else 
                         attackSquare = static_cast<Square>(static_cast<int>(attackSquare) + 8);
-                        // attackbb = bitboard::shiftNorth(bitboard::setbit(0ull, board.gameState.enPassantSquare));
-                    }
 
-                    board.bitboards[opps][6] ^= bitboard::setbit(0ull, board.gameState.enPassantSquare);
+                    board.bitboards[opps][6] ^= bitboard::setbit(0ull, board.currState.enPassantSquare);
                 }
                 else {
                     board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
@@ -303,7 +298,7 @@ namespace moveGen{
     }
 
     void genPsuedoLegalMoves(Board &board, std::vector<Move> &psuedoLegal) {
-        Color side = board.gameState.currentPlayer;
+        Color side = board.currState.currentPlayer;
         Color opps = static_cast<Color>(static_cast<int>(side) ^ 1);
         bb occupied = board.bitboards[0][6] | board.bitboards[1][6];
 
@@ -348,18 +343,18 @@ namespace moveGen{
         // generate castling moves
         switch (side) {
             case WHITE:
-                if (CASTLE_KING_WHITE & board.gameState.castlingState) {
+                if (CASTLE_KING_WHITE & board.currState.castlingState) {
                     psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_KINGSIDE));
                 }
-                if (CASTLE_QUEEN_WHITE & board.gameState.castlingState) {
+                if (CASTLE_QUEEN_WHITE & board.currState.castlingState) {
                     psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_QUEENSIDE));
                 }
                 break;
             case BLACK:
-                if (CASTLE_KING_BLACK & board.gameState.castlingState) {
+                if (CASTLE_KING_BLACK & board.currState.castlingState) {
                     psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_KINGSIDE));
                 }
-                if (CASTLE_QUEEN_BLACK & board.gameState.castlingState) {
+                if (CASTLE_QUEEN_BLACK & board.currState.castlingState) {
                     psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_QUEENSIDE));
                 }
                 break;
@@ -382,14 +377,14 @@ namespace moveGen{
                     pawnPush = whitePawnPush(pawnMask, occupied); 
                     pawnAttack = whitePawnAttacks(pawnMask, notfriendly);
                     enPassant = whitePawnAttacks(pawnMask, 
-                            bitboard::setbit(0ull, board.gameState.enPassantSquare));
+                            bitboard::setbit(0ull, board.currState.enPassantSquare));
                     promotionRange = horizontalMask[RANK8];
                     break;
                 case BLACK: 
                     pawnPush = blackPawnAttacks(pawnMask, occupied); break;
                     pawnAttack = blackPawnAttacks(pawnMask, notfriendly);
                     enPassant = blackPawnAttacks(pawnMask, 
-                            bitboard::setbit(0ull, board.gameState.enPassantSquare));
+                            bitboard::setbit(0ull, board.currState.enPassantSquare));
                     promotionRange = horizontalMask[RANK1];
                     break;
                 default: break;
@@ -422,8 +417,6 @@ namespace moveGen{
             while (enPassant) {
                 Square to = bitboard::getLsbPop(enPassant);
                 psuedoLegal.push_back(Move(from, to, EN_PASSANT));
-                std::cout << "en passant lmao " << (int)to << std::endl;
-                // psuedoLegal.push_back({currPiece, from, to, true, false, true});
             }
         }
     }

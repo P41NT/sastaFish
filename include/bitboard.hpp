@@ -30,6 +30,7 @@ namespace bitboard {
 
     inline bool getBit(bb in, Square sq) { return (bool)((in >> sq) & 1ull); }
     inline bb setbit(bb in, Square sq) { return (in | (1ull << sq)); }
+    inline bb toggleBit(bb in, Square sq) { return (in ^ (1ull << sq)); }
 
     bb flipVertical(bb in);
     bb flipHorizontal(bb in);
