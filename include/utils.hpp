@@ -69,6 +69,11 @@ const std::string pieceCharacters[2][6] = {
     { u8"♙", u8"♘", u8"♗", u8"♖", u8"♕", u8"♔" }
 };
 
+const std::string pieceLetters[2][6] = {
+    { "P", "N", "B", "R", "Q", "K" },
+    { "p", "n", "b", "r", "q", "k" },
+};
+
 const std::string squareWord[64] = {
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",

@@ -6,7 +6,7 @@
 using bb = uint64_t;
 
 namespace bitboard {
-    const int bitScanLookup[68] = {
+    static const int bitScanLookup[68] = {
       64,  0,  1, 39,  2, 15, 40, 23,
        3, 12, 16, 59, 41, 19, 24, 54,
        4, -1, 13, 10, 17, 62, 60, 28,
@@ -18,32 +18,29 @@ namespace bitboard {
        6, 34, 33, -1
     };
 
-    inline bb shiftSouth(bb in) { return in >> 8; }
-    inline bb shiftNorth(bb in) { return in << 8; }
-    inline bb shiftWest(bb in) { return (in << 1) & 0xFEFEFEFEFEFEFEFE; }
-    inline bb shiftEast(bb in) { return (in >> 1) & 0x7F7F7F7F7F7F7F7F; }
+    inline bb shiftSouth(const bb in) { return in >> 8; }
+    inline bb shiftNorth(const bb in) { return in << 8; }
+    inline bb shiftWest(const bb in) { return (in << 1) & 0xFEFEFEFEFEFEFEFE; }
+    inline bb shiftEast(const bb in) { return (in >> 1) & 0x7F7F7F7F7F7F7F7F; }
 
-    inline bb shiftSouthWest(bb in) { return (in >> 7) & 0xFEFEFEFEFEFEFEFE; }
-    inline bb shiftSouthEast(bb in) { return (in >> 9) & 0x7F7F7F7F7F7F7F7F; }
-    inline bb shiftNorthWest(bb in) { return (in << 9) & 0xFEFEFEFEFEFEFEFE; }
-    inline bb shiftNorthEast(bb in) { return (in << 7) & 0x7F7F7F7F7F7F7F7F; }
+    inline bb shiftSouthWest(const bb in) { return (in >> 7) & 0xFEFEFEFEFEFEFEFE; }
+    inline bb shiftSouthEast(const bb in) { return (in >> 9) & 0x7F7F7F7F7F7F7F7F; }
+    inline bb shiftNorthWest(const bb in) { return (in << 9) & 0xFEFEFEFEFEFEFEFE; }
+    inline bb shiftNorthEast(const bb in) { return (in << 7) & 0x7F7F7F7F7F7F7F7F; }
 
-    inline bool getBit(bb in, Square sq) { return (bool)((in >> sq) & 1ull); }
-    inline bb setbit(bb in, Square sq) { return (in | (1ull << sq)); }
-    inline bb toggleBit(bb in, Square sq) { return (in ^ (1ull << sq)); }
+    inline bool getBit(const bb in, const Square sq) { return (bool)((in >> sq) & 1ull); }
 
-    bb flipVertical(bb in);
-    bb flipHorizontal(bb in);
+    inline bb setbitr(const bb in, const Square sq) { return (in | (1ull << sq)); }
+    inline bb toggleBitr(const bb in, const Square sq) { return (in ^ (1ull << sq)); }
 
-    bb rotateClockwise(bb in);
-    bb rotateAntiClockwise(bb in);
-    bb rotateClockwise45(bb in);
-    bb rotateAntiClockwise45(bb in);
+    inline void setbit(bb &in, const Square sq) { in = (in | (1ull << sq)); }
+    inline void toggleBit(bb &in, const Square sq) { in = (in ^ (1ull << sq)); }
 
-    void printBitboard(bb in);
+    bb flipVertical(const bb &in);
+    bb flipHorizontal(const bb &in);
 
-    Square getLsb(bb in);
+    Square getLsb(const bb &in);
     Square getLsbPop(bb &in);
 
-    inline int numBits(bb in) { return __builtin_popcount(in); }
+    inline int numBits(bb in) { return __builtin_popcountll(in); }
 };

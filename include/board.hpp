@@ -7,11 +7,14 @@
 #include <cstdint>
 #include <stack>
 #include <string>
-#include <vector>
 
 struct Piece {
     PieceType pieceType;
     Color color;
+    
+    bool operator==(const Piece &b) const {
+        return (b.pieceType == pieceType && b.color == color);
+    }
 };
 
 struct GameState {
@@ -35,15 +38,8 @@ public:
     Board(std::string FEN);
     Board();
 
-    std::vector<Move> psuedoLegalMoves();
-    std::vector<Move> legalMoves();
-
-    inline std::string printPiece(Piece p);
-
     void makeMove(Move move);
     void unMakeMove(Move move);
-
-    void printBoard();
-    static void printMove(Board &b, Move &mv);
+    void unMakeMove();
 };
 

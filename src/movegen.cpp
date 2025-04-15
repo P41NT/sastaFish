@@ -1,4 +1,5 @@
-#include "../include/generatemoves.hpp"
+#include "../include/movegen.hpp"
+#include <iostream>
 
 namespace moveGen{
     bb knightAttackTable[64];
@@ -17,19 +18,20 @@ namespace moveGen{
 
     bb blackPawnPush(bb pawns, bb occupied) { 
         pawns = bitboard::shiftSouth(bitboard::shiftNorth(pawns) & (~occupied));
-        bb doublePush = bitboard::shiftNorth(bitboard::shiftNorth(pawns & 0xff00));
+        bb doublePush = bitboard::shiftNorth(bitboard::shiftNorth(pawns & 0xff00)) & (~occupied);
         return doublePush | bitboard::shiftNorth(pawns); 
     } 
+
     bb whitePawnPush(bb pawns, bb occupied) { 
         pawns = bitboard::shiftNorth(bitboard::shiftSouth(pawns) & (~occupied));
-        bb doublePush = bitboard::shiftSouth(bitboard::shiftSouth(pawns & 0xff000000000000));
+        bb doublePush = bitboard::shiftSouth(bitboard::shiftSouth(pawns & 0xff000000000000)) & (~occupied);
         return doublePush | bitboard::shiftSouth(pawns); 
     } 
 
     void preprocessknightMoves() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                bb currbb = bitboard::setbit(0, (Square)(i * 8 + j));
+                bb currbb = bitboard::setbitr(0ull, (Square)(i * 8 + j));
                 bb attackbb = 
                     bitboard::shiftNorth(bitboard::shiftEast(bitboard::shiftEast(currbb))) |
                     bitboard::shiftNorth(bitboard::shiftNorth(bitboard::shiftEast(currbb))) |
@@ -48,7 +50,7 @@ namespace moveGen{
     void preprocesskingMoves() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                bb currbb = bitboard::setbit(0, (Square)(i * 8 + j));
+                bb currbb = bitboard::setbitr(0ull, (Square)(i * 8 + j));
                 bb attackbb = 
                     bitboard::shiftNorth(currbb) |
                     bitboard::shiftWest(currbb)  |
@@ -67,9 +69,11 @@ namespace moveGen{
     void preprocessbishopMasks() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                diagonalMask[i + j] = bitboard::setbit(diagonalMask[i + j], (Square)(i * 8 + j));
-                antiDiagonalMask[7 + i - j] = 
-                    bitboard::setbit(antiDiagonalMask[7 + i - j], (Square)(i * 8 + j));
+                // diagonalMask[i + j] = bitboard::setbit(diagonalMask[i + j], (Square)(i * 8 + j));
+                // antiDiagonalMask[7 + i - j] = 
+                //     bitboard::setbit(antiDiagonalMask[7 + i - j], (Square)(i * 8 + j));
+                bitboard::setbit(diagonalMask[i + j], (Square(i * 8 + j)));
+                bitboard::setbit(antiDiagonalMask[7 + i - j], (Square(i * 8 + j)));
             }
         }
     }
@@ -77,8 +81,8 @@ namespace moveGen{
     void preprocessrookMasks() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                horizontalMask[i] = bitboard::setbit(horizontalMask[i], (Square)(8 * i + j));
-                verticalMask[j] = bitboard::setbit(verticalMask[j], (Square)(8 * i + j));
+                bitboard::setbit(horizontalMask[i], (Square)(8 * i + j));
+                bitboard::setbit(verticalMask[j], (Square)(8 * i + j));
             }
         }
     }
@@ -92,7 +96,7 @@ namespace moveGen{
 
     bb genBishopMask(bb occupied, Square sq) {
         bb s = 0ull;
-        s = bitboard::setbit(s, sq);
+        s = bitboard::setbitr(s, sq);
 
         int row = sq / 8; int col = sq % 8;
         int diag = row + col;
@@ -120,7 +124,7 @@ namespace moveGen{
 
     bb genRookMask(bb occupied, Square sq) {
         bb s = 0ull;
-        s = bitboard::setbit(s, sq);
+        s = bitboard::setbitr(s, sq);
         int row = sq / 8; int col = sq % 8;
 
         bb occupiedFlip = bitboard::flipHorizontal(occupied);
@@ -140,8 +144,8 @@ namespace moveGen{
         return top | bottom | left | right;
     }
 
-    Square isSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col) {
-        bb squareBB = bitboard::setbit(0ull, sq);
+    Square getAttackingSquare(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col) {
+        bb squareBB = bitboard::setbitr(0ull, sq);
         bb occupied = boards[0][6] | boards[1][6];
 
         occupied &= (~squareBB);
@@ -168,8 +172,29 @@ namespace moveGen{
         return N_SQUARES;
     }
 
+    bool isSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col) {
+        bb squareBB = bitboard::setbitr(0ull, sq);
+        bb occupied = boards[0][6] | boards[1][6];
+
+        occupied &= (~squareBB);
+
+        if (col == BLACK && whitePawnAttacks(squareBB, boards[BLACK][PAWN])) return true;
+        else if (col == WHITE && blackPawnAttacks(squareBB, boards[WHITE][PAWN])) return true;
+
+        bb bishopMask = genBishopMask(occupied, sq);
+        bb rookMask = genRookMask(occupied, sq);
+
+        if (boards[col][KING] & kingAttackTable[sq]) return true;
+        if (boards[col][KNIGHT] & knightAttackTable[sq]) return true;
+        if (boards[col][BISHOP] & bishopMask) return true;
+        if (boards[col][ROOK] & rookMask) return true;
+        if (boards[col][QUEEN] & (rookMask | bishopMask)) return true;
+
+        return false;
+    }
+
     int countSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col) {
-        bb squareBB = bitboard::setbit(0ull, sq);
+        bb squareBB = bitboard::setbitr(0ull, sq);
         bb occupied = boards[0][6] | boards[1][6];
 
         int answer = 0;
@@ -192,9 +217,9 @@ namespace moveGen{
         return answer;
     }
 
-    void genLegalMoves(Board &board, std::vector<Move> &legal) {
-        std::vector<Move> psuedoLegal;
-        genPsuedoLegalMoves(board, psuedoLegal);
+    std::vector<Move> genLegalMoves(Board &board) {
+        std::vector<Move> psuedoLegal = genPsuedoLegalMoves(board);
+        std::vector<Move> legal;
 
         Color side = board.currState.currentPlayer;
         Color opps = static_cast<Color>(static_cast<int>(side) ^ 1);
@@ -207,24 +232,36 @@ namespace moveGen{
         if (board.currState.isInCheck) {
             int countCheck = countSquareAttacked(board.bitboards, kingSquare, opps);
             if (countCheck == 1) {
-                Square attacker = isSquareAttacked(board.bitboards, kingSquare, opps);
+                Square attacker = getAttackingSquare(board.bitboards, kingSquare, opps);
                 for (auto move :  psuedoLegal) {
                     if (move.isCastle()) continue;
                     if (board.board[move.from()].pieceType == KING) {
                         board.bitboards[side][6] ^= kingBoard;
-                        Square check = isSquareAttacked(board.bitboards, move.to(), opps);
+                        bool check = isSquareAttacked(board.bitboards, move.to(), opps);
                         board.bitboards[side][6] ^= kingBoard;
-                        if (check == N_SQUARES) legal.push_back(move);
+                        if (!check) legal.push_back(move);
                     }
-                    else if (move.to() == attacker) legal.push_back(move);
                     else {
-                        board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
-                        board.bitboards[side][6] ^= bitboard::setbit(0ull, move.to());
-                        Square check = isSquareAttacked(board.bitboards, kingSquare, opps);
-                        board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
-                        board.bitboards[side][6] ^= bitboard::setbit(0ull, move.to());
+                        bitboard::toggleBit(board.bitboards[side][6], move.to());
+                        bitboard::toggleBit(board.bitboards[side][6], move.from());
 
-                        if (check == N_SQUARES) legal.push_back(move);
+                        const Piece capturePiece = board.board[move.to()];
+                        if (move.isCapture()) {
+                            bitboard::toggleBit(board.bitboards[opps][6], move.to());
+                            bitboard::toggleBit(board.bitboards[opps][capturePiece.pieceType], move.to());
+                        }
+
+                        bool check = isSquareAttacked(board.bitboards, kingSquare, opps);
+
+                        bitboard::toggleBit(board.bitboards[side][6], move.to());
+                        bitboard::toggleBit(board.bitboards[side][6], move.from());
+
+                        if (move.isCapture()) {
+                            bitboard::toggleBit(board.bitboards[opps][6], move.to());
+                            bitboard::toggleBit(board.bitboards[opps][capturePiece.pieceType], move.to());
+                        }
+
+                        if (!check) legal.push_back(move);
                     }
                 }
             }
@@ -233,71 +270,112 @@ namespace moveGen{
                     if (move.isCastle()) continue;
                     if (board.board[move.from()].pieceType != KING) continue;
                     board.bitboards[side][6] ^= kingBoard;
-                    Square check = isSquareAttacked(board.bitboards, move.to(), opps);
+                    bool check = isSquareAttacked(board.bitboards, move.to(), opps);
                     board.bitboards[side][6] ^= kingBoard;
 
-                    if (check == N_SQUARES) legal.push_back(move);
+                    if (!check) legal.push_back(move);
                 }
             }
         }
         else {
-            for (auto move : psuedoLegal) {
+            for (auto &move : psuedoLegal) {
                 if (move.isCastle()) {
                     if (board.currState.currentPlayer == WHITE) {
-                        if (move.move == MoveFlag::CASTLE_KINGSIDE) {
+                        if (move.move >> 12 == MoveFlag::CASTLE_KINGSIDE) {
+                            if (bitboard::getBit(occupied, F1) || bitboard::getBit(occupied, G1)) 
+                                continue;
                             if (isSquareAttacked(board.bitboards, F1, BLACK) ||
                                     isSquareAttacked(board.bitboards, G1, BLACK))
                                 continue;
                         }
-                        if (move.move == MoveFlag::CASTLE_QUEENSIDE) {
+                        if (move.move >> 12 == MoveFlag::CASTLE_QUEENSIDE) {
+                            if (bitboard::getBit(occupied, D1) || 
+                                    bitboard::getBit(occupied, C1) ||
+                                    bitboard::getBit(occupied, B1)) 
+                                continue;
                             if (isSquareAttacked(board.bitboards, D1, BLACK) || 
-                                    isSquareAttacked(board.bitboards, C1, BLACK) || 
-                                    isSquareAttacked(board.bitboards, B1, BLACK))
+                                    isSquareAttacked(board.bitboards, C1, BLACK))
                                 continue;
                         }
                     }
                     else {
-                        if (move.move == MoveFlag::CASTLE_KINGSIDE) {
-                            if (isSquareAttacked(board.bitboards, F8, BLACK) ||
-                                    isSquareAttacked(board.bitboards, G8, BLACK))
+                        if (move.move >> 12 == MoveFlag::CASTLE_KINGSIDE) {
+                            if (bitboard::getBit(occupied, F8) || 
+                                    bitboard::getBit(occupied, G8))
+                                continue;
+                            if (isSquareAttacked(board.bitboards, F8, WHITE) ||
+                                    isSquareAttacked(board.bitboards, G8, WHITE))
                                 continue;
                         }
-                        if (move.move == MoveFlag::CASTLE_QUEENSIDE) {
-                            if (isSquareAttacked(board.bitboards, D8, BLACK) || 
-                                    isSquareAttacked(board.bitboards, C8, BLACK) || 
-                                    isSquareAttacked(board.bitboards, B8, BLACK))
+                        if (move.move >> 12 == MoveFlag::CASTLE_QUEENSIDE) {
+                            if (bitboard::getBit(occupied, D8) || 
+                                    bitboard::getBit(occupied, C8) ||
+                                    bitboard::getBit(occupied, B8)) 
+                                continue;
+                            if (isSquareAttacked(board.bitboards, D8, WHITE) || 
+                                    isSquareAttacked(board.bitboards, C8, WHITE))
                                 continue;
                         }
                     }
                     legal.push_back(move);
                 }
                 else if (move.isEnPassant()) {
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, board.currState.enPassantSquare);
+                    bitboard::toggleBit(board.bitboards[side][6], move.from());
+                    bitboard::toggleBit(board.bitboards[side][6], board.currState.enPassantSquare);
 
-                    bb attackbb;
                     Square attackSquare = board.currState.enPassantSquare;
                     if (board.currState.currentPlayer == WHITE) 
-                        attackSquare = static_cast<Square>(static_cast<int>(attackSquare) - 8);
-                    else 
                         attackSquare = static_cast<Square>(static_cast<int>(attackSquare) + 8);
+                    else 
+                        attackSquare = static_cast<Square>(static_cast<int>(attackSquare) - 8);
 
-                    board.bitboards[opps][6] ^= bitboard::setbit(0ull, board.currState.enPassantSquare);
+                    bitboard::toggleBit(board.bitboards[opps][6], attackSquare);
+
+                    bool check = isSquareAttacked(board.bitboards, kingSquare, opps);
+
+                    bitboard::toggleBit(board.bitboards[side][6], move.from());
+                    bitboard::toggleBit(board.bitboards[side][6], board.currState.enPassantSquare);
+                    bitboard::toggleBit(board.bitboards[opps][6], attackSquare);
+
+                    if (!check) legal.push_back(move);
                 }
                 else {
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, move.to());
-                    Square check = isSquareAttacked(board.bitboards, kingSquare, opps);
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, move.from());
-                    board.bitboards[side][6] ^= bitboard::setbit(0ull, move.to());
+                    if (board.board[move.from()].pieceType == KING) {
+                        if (!isSquareAttacked(board.bitboards, move.to(), opps))
+                            legal.push_back(move);
+                    }
+                    else {
+                        bitboard::toggleBit(board.bitboards[side][6], move.from());
+                        bitboard::toggleBit(board.bitboards[side][6], move.to());
 
-                    if (check == N_SQUARES) legal.push_back(move);
+                        Piece capturePiece = board.board[move.to()];
+                        
+                        if (move.isCapture()) {
+                            bitboard::toggleBit(board.bitboards[opps][6], move.to());
+                            bitboard::toggleBit(board.bitboards[opps][capturePiece.pieceType], move.to());
+                        }
+
+                        bool check = isSquareAttacked(board.bitboards, kingSquare, opps);
+
+                        bitboard::toggleBit(board.bitboards[side][6], move.from());
+                        bitboard::toggleBit(board.bitboards[side][6], move.to());
+
+                        if (move.isCapture()) {
+                            bitboard::toggleBit(board.bitboards[opps][6], move.to());
+                            bitboard::toggleBit(board.bitboards[opps][capturePiece.pieceType], move.to());
+                        }
+
+                        if (!check) legal.push_back(move);
+                    }
                 }
             }
         }
+        return legal;
     }
 
-    void genPsuedoLegalMoves(Board &board, std::vector<Move> &psuedoLegal) {
+    std::vector<Move> genPsuedoLegalMoves(Board &board) {
+        std::vector<Move> psuedoLegal;
+
         Color side = board.currState.currentPlayer;
         Color opps = static_cast<Color>(static_cast<int>(side) ^ 1);
         bb occupied = board.bitboards[0][6] | board.bitboards[1][6];
@@ -334,7 +412,6 @@ namespace moveGen{
                     bool isCapture = bitboard::getBit(notfriendly, to);
                     if (isCapture) psuedoLegal.push_back(Move(from, to, CAPTURE));
                     else psuedoLegal.push_back(Move(from, to, QUIET));
-                    // psuedoLegal.push_back({currPiece, from, to, isCapture, false, false});
                 }
             }
         }
@@ -347,15 +424,15 @@ namespace moveGen{
                     psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_KINGSIDE));
                 }
                 if (CASTLE_QUEEN_WHITE & board.currState.castlingState) {
-                    psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_QUEENSIDE));
+                    psuedoLegal.push_back(Move(E1, C1, MoveFlag::CASTLE_QUEENSIDE));
                 }
                 break;
             case BLACK:
                 if (CASTLE_KING_BLACK & board.currState.castlingState) {
-                    psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_KINGSIDE));
+                    psuedoLegal.push_back(Move(E8, G8, MoveFlag::CASTLE_KINGSIDE));
                 }
                 if (CASTLE_QUEEN_BLACK & board.currState.castlingState) {
-                    psuedoLegal.push_back(Move(E1, G1, MoveFlag::CASTLE_QUEENSIDE));
+                    psuedoLegal.push_back(Move(E8, C8, MoveFlag::CASTLE_QUEENSIDE));
                 }
                 break;
             default: break;
@@ -366,7 +443,7 @@ namespace moveGen{
         currPiece = {PAWN, side};
         while (temp) {
             Square from = bitboard::getLsbPop(temp);
-            bb pawnMask = bitboard::setbit(0ull, from);
+            bb pawnMask = bitboard::setbitr(0ull, from);
             bb pawnPush, pawnAttack;
             bb promotionRange;
 
@@ -377,34 +454,34 @@ namespace moveGen{
                     pawnPush = whitePawnPush(pawnMask, occupied); 
                     pawnAttack = whitePawnAttacks(pawnMask, notfriendly);
                     enPassant = whitePawnAttacks(pawnMask, 
-                            bitboard::setbit(0ull, board.currState.enPassantSquare));
+                            bitboard::setbitr(0ull, board.currState.enPassantSquare));
                     promotionRange = horizontalMask[RANK8];
                     break;
                 case BLACK: 
-                    pawnPush = blackPawnAttacks(pawnMask, occupied); break;
+                    pawnPush = blackPawnPush(pawnMask, occupied);
                     pawnAttack = blackPawnAttacks(pawnMask, notfriendly);
                     enPassant = blackPawnAttacks(pawnMask, 
-                            bitboard::setbit(0ull, board.currState.enPassantSquare));
+                            bitboard::setbitr(0ull, board.currState.enPassantSquare));
                     promotionRange = horizontalMask[RANK1];
                     break;
                 default: break;
             }
-            bitboard::printBitboard(pawnPush);
             while (pawnPush) {
                 Square to = bitboard::getLsbPop(pawnPush);
-                if (bitboard::setbit(0ull, to) & promotionRange) {
+                if (bitboard::setbitr(0ull, to) & promotionRange) {
                     psuedoLegal.push_back(Move(from, to, PROMOTE_B));
                     psuedoLegal.push_back(Move(from, to, PROMOTE_N));
                     psuedoLegal.push_back(Move(from, to, PROMOTE_R));
                     psuedoLegal.push_back(Move(from, to, PROMOTE_Q));
                 }
                 else {
-                    psuedoLegal.push_back(Move(from, to, QUIET));
+                    if (abs(to - from) == 16) psuedoLegal.push_back(Move(from, to, DOUBLE_PUSH));
+                    else psuedoLegal.push_back(Move(from, to, QUIET));
                 }
             }
             while (pawnAttack) {
                 Square to = bitboard::getLsbPop(pawnAttack);
-                if (bitboard::setbit(0ull, to) & promotionRange) {
+                if (bitboard::setbitr(0ull, to) & promotionRange) {
                     psuedoLegal.push_back(Move(from, to, CAPTURE | PROMOTE_B));
                     psuedoLegal.push_back(Move(from, to, CAPTURE | PROMOTE_N));
                     psuedoLegal.push_back(Move(from, to, CAPTURE | PROMOTE_R));
@@ -419,5 +496,6 @@ namespace moveGen{
                 psuedoLegal.push_back(Move(from, to, EN_PASSANT));
             }
         }
+        return psuedoLegal;
     }
 }

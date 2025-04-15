@@ -2,6 +2,7 @@
 
 #include "bitboard.hpp"
 #include "board.hpp"
+#include <vector>
 
 namespace moveGen {
     extern bb knightAttackTable[64];
@@ -25,9 +26,10 @@ namespace moveGen {
     bb genBishopMask(bb occupied, Square sq);
     bb genRookMask(bb occupied, Square sq);
 
-    Square isSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
-    int countSquareAttacked(std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
+    Square getAttackingSquare(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col);
+    bool isSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col);
+    int countSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
 
-    void genPsuedoLegalMoves(Board &board, std::vector<Move> &psuedoLegal);
-    void genLegalMoves(Board &board, std::vector<Move> &legal);
+    std::vector<Move> genPsuedoLegalMoves(Board &board);
+    std::vector<Move> genLegalMoves(Board &board);
 }

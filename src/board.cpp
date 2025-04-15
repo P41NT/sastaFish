@@ -1,65 +1,31 @@
 #include "../include/board.hpp"
 #include "../include/utils.hpp"
 #include "../include/bitboard.hpp"
-#include "../include/generatemoves.hpp"
-#include "../include/colors.h"
+#include "../include/movegen.hpp"
 
 #include <cctype>
 #include <cstdlib>
-#include <iostream>
-#include <ostream>
 #include <sstream>
 #include <string>
 #include <map>
-
-void Board::printBoard() {
-    for (int rank = 0; rank < 8; rank++) {
-        for (int file = 0; file < 8; file++) {
-            if (!file) std::cout << 8 - rank << "\t";
-            // std::cout << this->board[rank * 8 + file].pieceType << " ";
-            std::cout << printPiece(this->board[rank * 8 + file]) << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << "\n\ta b c d e f g h\n" << std::endl;
-
-    if (currState.isInCheck) std::cout << "In Check" << std::endl;
-    if (currState.enPassantSquare != N_SQUARES) 
-        std::cout << "En passant square : " << squareWord[currState.enPassantSquare] << std::endl;
-
-    if (currState.castlingState != 0) {
-        std::cout << "Available castling : ";
-        if (currState.castlingState & CASTLE_KING_WHITE) std::cout << "K";
-        if (currState.castlingState & CASTLE_QUEEN_WHITE) std::cout << "Q";
-        if (currState.castlingState & CASTLE_KING_BLACK) std::cout << "k";
-        if (currState.castlingState & CASTLE_QUEEN_BLACK) std::cout << "q";
-        std::cout << std::endl;
-    }
-}
 
 Board::Board(std::string FEN) {
     std::stringstream split1(FEN);
     std::string board;
     split1 >> board;
 
-    std::cout << board << std::endl;
-
     std::stringstream rowsplit(board);
     std::string currRow;
     int rank = 0;
 
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
+    for (int i = 0; i < 8; i++) 
+        for (int j = 0; j < 8; j++) 
             this->board[i * 8 + j] = Piece{N_PIECES, N_COLORS};
-        }
-    }
 
     while (!rowsplit.eof()) {
         std::getline(rowsplit, currRow, '/');
-
         int l = currRow.length();
         int file = 0;
-
 
         for (int i = 0; i < l; i++) {
             Square square = (Square)(rank * 8 + file);
@@ -72,8 +38,8 @@ Board::Board(std::string FEN) {
                 }
 
                 int pie = pieceNumberMap.at(currRow[i]);
-                bitboards[col][pie] = bitboard::setbit(bitboards[col][pie], square);
-                bitboards[col][6] = bitboard::setbit(bitboards[col][6], square);
+                bitboard::setbit(bitboards[col][pie], square);
+                bitboard::setbit(bitboards[col][6], square);
                 this->board[rank * 8 + file] = Piece{(PieceType)pie, (Color)col};
 
                 file++;
@@ -96,7 +62,7 @@ Board::Board(std::string FEN) {
         { 'Q', CASTLE_QUEEN_WHITE },
         { 'K', CASTLE_KING_WHITE},
         { 'q', CASTLE_QUEEN_BLACK},
-        { 'k', CASTLE_QUEEN_BLACK},
+        { 'k', CASTLE_KING_BLACK},
     };
 
     currState.castlingState = 0;
@@ -113,22 +79,18 @@ Board::Board(std::string FEN) {
     const Color opps = static_cast<Color>(static_cast<int>(currState.currentPlayer ^ 1));
 
     currState.isInCheck = moveGen::isSquareAttacked(bitboards, 
-            bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps) != N_SQUARES;
-}
-
-inline std::string Board::printPiece(Piece p) { 
-    if (p.pieceType == N_PIECES) return ".";
-    return pieceCharacters[p.color][p.pieceType]; 
+            bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
 }
 
 void Board::makeMove(Move mv) {
     const Piece fromPiece = board[mv.from()];
-    
+
     // updated the from piece bitboards
-    bitboards[fromPiece.color][fromPiece.pieceType] = bitboard::toggleBit(
-            bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
-    bitboards[fromPiece.color][fromPiece.pieceType] = bitboard::toggleBit(
-            bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
+    bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
+    bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
+
+    bitboard::toggleBit(bitboards[fromPiece.color][6], mv.from());
+    bitboard::toggleBit(bitboards[fromPiece.color][6], mv.to());
 
     // stored the capturedSquare and capturePiece
     Square captureSquare = mv.to();
@@ -140,50 +102,50 @@ void Board::makeMove(Move mv) {
 
     const Piece capturePiece = board[captureSquare];
 
-    std::cout << "captureSquare " << squareWord[captureSquare] << std::endl;
-
     // updated the board of from and to
     board[mv.from()] = Piece{N_PIECES, N_COLORS};
     board[mv.to()] = fromPiece;
 
     if (mv.isCapture()) {
-        bitboards[capturePiece.color][capturePiece.pieceType] = bitboard::toggleBit(
-                bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
-        board[captureSquare] = Piece{N_PIECES, N_COLORS};
+        bitboard::toggleBit(bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
+        bitboard::toggleBit(bitboards[capturePiece.color][6], captureSquare);
+        if (mv.isEnPassant()) board[captureSquare] = Piece{N_PIECES, N_COLORS};
         this->captured.push(capturePiece);
     }
     if (mv.isPromotion()) {
         const Piece toPromote = Piece{ mv.promotionPiece(), currState.currentPlayer };
-        bitboards[fromPiece.color][fromPiece.pieceType] = bitboard::toggleBit(
-                bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
-        bitboards[toPromote.color][toPromote.pieceType] = bitboard::toggleBit(
-                bitboards[toPromote.color][toPromote.pieceType], mv.to());
+        bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
+        bitboard::toggleBit(bitboards[toPromote.color][toPromote.pieceType], mv.to());
         board[mv.to()] = toPromote;
     }
 
-    static const Square rookFromSquareK = static_cast<Square>(static_cast<int>(mv.from() + 3));
-    static const Square rookToSquareK = static_cast<Square>(static_cast<int>(mv.to() - 1));
-    static const Square rookFromSquareQ = static_cast<Square>(static_cast<int>(mv.from() + 3));
-    static const Square rookToSquareQ = static_cast<Square>(static_cast<int>(mv.to() - 1));
+    const Square rookFromSquareK = static_cast<Square>(static_cast<int>(mv.from() + 3));
+    const Square rookToSquareK = static_cast<Square>(static_cast<int>(mv.to() - 1));
+    const Square rookFromSquareQ = static_cast<Square>(static_cast<int>(mv.from() - 4));
+    const Square rookToSquareQ = static_cast<Square>(static_cast<int>(mv.to() + 1));
 
     if (mv.isCastle()) {
         switch (mv.move >> 12) {
             case CASTLE_KINGSIDE:
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookFromSquareK);
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookToSquareK);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareK);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareK);
+
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
+
                 board[rookFromSquareK] = {N_PIECES, N_COLORS};
                 board[rookToSquareK] = {ROOK, fromPiece.color};
                 break;
 
             case CASTLE_QUEENSIDE:
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookFromSquareQ);
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookToSquareQ);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareQ);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareQ);
+
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
+
                 board[rookFromSquareQ] = {N_PIECES, N_COLORS};
-                board[rookToSquareK] = {ROOK, fromPiece.color};
+                board[rookToSquareQ] = {ROOK, fromPiece.color};
                 break;
         }
     }
@@ -193,8 +155,12 @@ void Board::makeMove(Move mv) {
     switch (fromPiece.pieceType) {
         case KING:
             switch(fromPiece.color) {
-                case WHITE: currState.castlingState &= ~(CASTLE_KING_WHITE | CASTLE_QUEEN_WHITE); break;
-                case BLACK: currState.castlingState &= ~(CASTLE_KING_BLACK | CASTLE_QUEEN_BLACK); break;
+                case WHITE: 
+                    currState.castlingState &= ~(CASTLE_KING_WHITE | CASTLE_QUEEN_WHITE); 
+                    break;
+                case BLACK: 
+                    currState.castlingState &= ~(CASTLE_KING_BLACK | CASTLE_QUEEN_BLACK); 
+                    break;
                 default: break;
             }
             break;
@@ -210,28 +176,48 @@ void Board::makeMove(Move mv) {
         default: break;
     }
 
+    if (mv.isCapture()) {
+        switch (mv.to()) {
+            case H1: currState.castlingState &= ~(CASTLE_KING_WHITE); break;
+            case A1: currState.castlingState &= ~(CASTLE_QUEEN_WHITE); break;
+            case H8: currState.castlingState &= ~(CASTLE_KING_BLACK); break;
+            case A8: currState.castlingState &= ~(CASTLE_QUEEN_BLACK); break;
+            default: break;
+        }
+    }
 
     currState.currentPlayer = static_cast<Color>(static_cast<int>(currState.currentPlayer) ^ 1);
-    currState.enPassantSquare = N_SQUARES;
+
+    if (mv.isDoublePush()) {
+        currState.enPassantSquare = static_cast<Square>(static_cast<int>((mv.from() + mv.to()) >> 1));
+    }
+    else currState.enPassantSquare = N_SQUARES;
 
     const Square oppKingSquare = bitboard::getLsb(bitboards[currState.currentPlayer][KING]);
-    currState.isInCheck = (moveGen::isSquareAttacked(bitboards, oppKingSquare, fromPiece.color) != N_SQUARES);
+    currState.isInCheck = moveGen::isSquareAttacked(bitboards, oppKingSquare, fromPiece.color);
+
+    moves.push(mv);
+}
+
+void Board::unMakeMove() {
+    if (moves.empty()) return;
+    Move lastMove = moves.top();
+    moves.pop();
+    this->unMakeMove(lastMove);
 }
 
 void Board::unMakeMove(Move mv) {
     currState = gameStates.top();
     gameStates.pop();
-    currState.currentPlayer = static_cast<Color>(static_cast<int>(currState.currentPlayer) ^ 1);
 
     const Piece fromPiece = board[mv.to()];
     
     // updated the from piece bitboards
-    bitboards[fromPiece.color][fromPiece.pieceType] = bitboard::toggleBit(
-            bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
-    bitboards[fromPiece.color][fromPiece.pieceType] = bitboard::toggleBit(
-            bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
+    bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
+    bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
 
-    std::cout << squareWord[mv.to()] << std::endl;
+    bitboard::toggleBit(bitboards[fromPiece.color][6], mv.from());
+    bitboard::toggleBit(bitboards[fromPiece.color][6], mv.to());
 
     // updated the board of from and to
     board[mv.from()] = fromPiece;
@@ -240,83 +226,51 @@ void Board::unMakeMove(Move mv) {
     if (mv.isCapture()) {
         Square captureSquare = mv.isEnPassant() ? currState.enPassantSquare : mv.to();
         if (mv.isEnPassant()) {
-            if (currState.currentPlayer == WHITE) captureSquare = (Square)((int)captureSquare - 8);
-            else captureSquare = (Square)((int)captureSquare + 8);
+            if (currState.currentPlayer == WHITE) captureSquare = (Square)((int)captureSquare + 8);
+            else captureSquare = (Square)((int)captureSquare - 8);
         }
-        const Piece capturePiece = captured.top();
-        captured.pop();
-        bitboards[capturePiece.color][capturePiece.pieceType] = bitboard::toggleBit(
-                bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
+        const Piece capturePiece = captured.top(); captured.pop();
+        bitboard::toggleBit(bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
+        bitboard::toggleBit(bitboards[capturePiece.color][6], captureSquare);
         board[captureSquare] = capturePiece;
     }
     if (mv.isPromotion()) {
         const Piece toPromote = Piece{ mv.promotionPiece(), currState.currentPlayer };
-        bitboards[fromPiece.color][fromPiece.pieceType] = bitboard::toggleBit(
-                bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
-        bitboards[toPromote.color][toPromote.pieceType] = bitboard::toggleBit(
-                bitboards[toPromote.color][toPromote.pieceType], mv.to());
+        bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
+        bitboard::toggleBit(bitboards[toPromote.color][PAWN], mv.from());
+        board[mv.from()] = {PAWN, fromPiece.color};
     }
 
-    static const Square rookFromSquareK = static_cast<Square>(static_cast<int>(mv.from() + 3));
-    static const Square rookToSquareK = static_cast<Square>(static_cast<int>(mv.to() - 1));
-    static const Square rookFromSquareQ = static_cast<Square>(static_cast<int>(mv.from() + 3));
-    static const Square rookToSquareQ = static_cast<Square>(static_cast<int>(mv.to() - 1));
+    const Square rookFromSquareK = static_cast<Square>(static_cast<int>(mv.from() + 3));
+    const Square rookToSquareK = static_cast<Square>(static_cast<int>(mv.to() - 1));
+    const Square rookFromSquareQ = static_cast<Square>(static_cast<int>(mv.from() - 4));
+    const Square rookToSquareQ = static_cast<Square>(static_cast<int>(mv.to() + 1));
 
     if (mv.isCastle()) {
         switch (mv.move >> 12) {
             case CASTLE_KINGSIDE:
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookFromSquareK);
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookToSquareK);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareK);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareK);
+
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
+
                 board[rookToSquareK] = {N_PIECES, N_COLORS};
                 board[rookFromSquareK] = {ROOK, fromPiece.color};
                 break;
 
             case CASTLE_QUEENSIDE:
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookFromSquareQ);
-                bitboards[fromPiece.color][ROOK] = bitboard::toggleBit(
-                        bitboards[fromPiece.color][fromPiece.pieceType], rookToSquareQ);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareQ);
+                bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareQ);
+
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
+                bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
+
                 board[rookToSquareQ] = {N_PIECES, N_COLORS};
-                board[rookFromSquareK] = {ROOK, fromPiece.color};
+                board[rookFromSquareQ] = {ROOK, fromPiece.color};
                 break;
         }
     }
 }
 
-
-void Board::printMove(Board &b, Move &mv) {
-    const TermColor::Modifier captureColor(TermColor::FG_RED);
-    const TermColor::Modifier promotionColor(TermColor::FG_GREEN);
-    const TermColor::Modifier castleColor(TermColor::FG_BLUE);
-    const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
-    const TermColor::Modifier squareFromColor(TermColor::FG_MAGENTA);
-    const TermColor::Modifier squareToColor(TermColor::FG_BLUE);
-
-    std::cout << "[";
-    std::cout << squareFromColor << squareWord[mv.from()];
-    std::cout << defaultColor << " -> ";
-    std::cout << squareToColor << squareWord[mv.to()] << defaultColor << "  ";
-
-    std::cout << pieceCharacters[b.currState.currentPlayer][b.board[mv.from()].pieceType];
-    if (mv.isCapture()) {
-        std::cout << captureColor << "  ";
-        std::cout << pieceCharacters[b.currState.currentPlayer][b.board[mv.to()].pieceType];
-        std::cout << " ❌" << defaultColor;
-    }
-    if (mv.isPromotion()) {
-        std::cout << promotionColor;
-        std::cout << pieceCharacters[b.currState.currentPlayer][mv.promotionPiece()];
-        std::cout << defaultColor;
-    }
-    if (mv.isCastle()) {
-        std::cout << castleColor;
-        if (mv.move == CASTLE_QUEENSIDE) std::cout << "  O-O-O ";
-        else std::cout << "  O-O ";
-        std::cout << defaultColor;
-    }
-    std::cout << "]" << std::endl;
-}
-
-Board::Board() : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR") {}
+Board::Board() : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}

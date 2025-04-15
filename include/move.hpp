@@ -1,4 +1,5 @@
 #include "utils.hpp"
+#include <cctype>
 
 /*
  * 1000 -> captures 
@@ -31,7 +32,8 @@ enum MoveFlag : int {
     QUIET = 0b0000,
 
     CASTLE_KINGSIDE = 0b0010,
-    CASTLE_QUEENSIDE = 0b0001
+    CASTLE_QUEENSIDE = 0b0001,
+    DOUBLE_PUSH = 0b0011
 };
 
 class Move {
@@ -40,17 +42,22 @@ public:
     inline Move() : move(0) {}
 
     inline Move(Square from, Square to) : move((uint8_t)from << 6 | (uint8_t)to) {}
-
     inline Move(Square from, Square to, uint8_t flags) : 
         move((flags << 12) | ((uint8_t)from << 6) | ((uint8_t)to)) { }
 
     inline bool isCapture() const { return (move >> 12 & 0b1000); }
     inline bool isPromotion() const { return (move >> 12 & 0b0100); }
-    inline bool isCastle() const { return ((move >> 12) == CASTLE_KINGSIDE || (move >> 12) == CASTLE_QUEENSIDE); }
+    inline bool isCastle() const { return ((move >> 12) == CASTLE_KINGSIDE 
+            || (move >> 12) == CASTLE_QUEENSIDE); }
     inline bool isEnPassant() const { return ((move >> 12) == MoveFlag::EN_PASSANT); }
+    inline bool isDoublePush() const { return ((move >> 12) == MoveFlag::DOUBLE_PUSH); }
+
+    inline std::string getUciString() const { 
+        return squareWord[from()] + squareWord[to()] + (isPromotion() ? pieceLetters[from() > A2][promotionPiece()] : "");
+    }
 
     inline PieceType promotionPiece() const {
-        switch (move >> 12) {
+        switch ((move >> 12) & (~CAPTURE)) {
             case PROMOTE_B: return BISHOP; break;
             case PROMOTE_N: return KNIGHT; break;
             case PROMOTE_R: return ROOK; break;

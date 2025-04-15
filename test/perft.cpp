@@ -1,5 +1,5 @@
 #include "../include/board.hpp"
-#include "../include/generatemoves.hpp"
+#include "../include/movegen.hpp"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -8,14 +8,13 @@
 int perft(std::shared_ptr<Board> b, int depth, bool debug) {
     if (depth == 0) return 1;
 
-    int answer = 0;
-    std::vector<Move> legalMoves;
-    moveGen::genLegalMoves(*b, legalMoves);
+    uint64_t answer = 0;
+    std::vector<Move> legalMoves = moveGen::genLegalMoves(*b);
 
     for (auto &mv : legalMoves) {
         b->makeMove(mv);
-        answer += perft(b, depth - 1, debug);
-        b->unMakeMove(mv);
+        answer += perft(b, depth - 1, false);
+        b->unMakeMove();
     }
 
     return answer;
@@ -26,7 +25,7 @@ int main(int argc, char** argv) {
 
     std::string initialFen = argv[2];
     std::shared_ptr<Board> b = std::make_shared<Board>(initialFen);
-
+    
     std::vector<std::string> moves(argc - 3);
     for (int i = 3; i < argc; i++) { moves[i - 3] = (argv[i]); }
 
@@ -59,7 +58,6 @@ int main(int argc, char** argv) {
         }
 
         if (b->board[toSquare].pieceType != N_PIECES) {
-            std::cout << mv << " " << b->board[toSquare].pieceType << std::endl;
             b->makeMove(Move(fromSquare, toSquare, MoveFlag::CAPTURE));
             continue;
         }
@@ -90,14 +88,13 @@ int main(int argc, char** argv) {
     }
     int depth = std::stoi(argv[1]);
 
-    std::vector<Move> legalMoves;
-    moveGen::genLegalMoves(*b, legalMoves);
+    std::vector<Move> legalMoves = moveGen::genLegalMoves(*b);
 
-    int total = 0;
+    uint64_t total = 0;
     for (auto &mv : legalMoves) {
         b->makeMove(mv);
         int moveAnswer = perft(b, depth - 1, false);
-        b->unMakeMove(mv);
+        b->unMakeMove();
         total += moveAnswer;
         std::cout << mv.getUciString() << " " << moveAnswer << std::endl;
     }
