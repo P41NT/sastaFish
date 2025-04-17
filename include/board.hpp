@@ -41,5 +41,7 @@ public:
     void makeMove(Move move);
     void unMakeMove(Move move);
     void unMakeMove();
+
+    void setFEN(std::string);
 };
 

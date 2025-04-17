@@ -1,6 +1,4 @@
 #include "../include/board.hpp"
-#include "../include/utils.hpp"
-#include "../include/bitboard.hpp"
 #include "../include/movegen.hpp"
 
 #include <cctype>
@@ -21,6 +19,7 @@ Board::Board(std::string FEN) {
     for (int i = 0; i < 8; i++) 
         for (int j = 0; j < 8; j++) 
             this->board[i * 8 + j] = Piece{N_PIECES, N_COLORS};
+
 
     while (!rowsplit.eof()) {
         std::getline(rowsplit, currRow, '/');
@@ -271,6 +270,90 @@ void Board::unMakeMove(Move mv) {
                 break;
         }
     }
+}
+
+void Board::setFEN(std::string FEN) {
+    std::stringstream split1(FEN);
+    std::string board;
+    split1 >> board;
+
+    while (moves.size()) moves.pop();
+    while (captured.size()) captured.pop();
+    while (gameStates.size()) gameStates.pop();
+
+    std::stringstream rowsplit(board);
+    std::string currRow;
+    int rank = 0;
+
+    for (int i = 0; i < 8; i++) 
+        for (int j = 0; j < 8; j++) 
+            this->board[i * 8 + j] = Piece{N_PIECES, N_COLORS};
+
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 7; j++) {
+            bitboards[i][j] = 0ull;
+        }
+    }
+
+    while (!rowsplit.eof()) {
+        std::getline(rowsplit, currRow, '/');
+        int l = currRow.length();
+        int file = 0;
+
+        for (int i = 0; i < l; i++) {
+            Square square = (Square)(rank * 8 + file);
+            if (std::isalpha(currRow[i])) {
+                int col = 0;
+
+                if (std::islower(currRow[i])) {
+                    col = 1;
+                    currRow[i] -= 32;
+                }
+
+                int pie = pieceNumberMap.at(currRow[i]);
+                bitboard::setbit(bitboards[col][pie], square);
+                bitboard::setbit(bitboards[col][6], square);
+                this->board[rank * 8 + file] = Piece{(PieceType)pie, (Color)col};
+
+                file++;
+            }
+            else {
+                int dig = currRow[i] - '0';
+                file += dig;
+            }
+        }
+        rank++;
+    }
+
+
+    std::string activeColor, castlingRights, enPassantSquareFEN;
+    split1 >> activeColor >> castlingRights >> enPassantSquareFEN;
+
+    if (activeColor == "b") currState.currentPlayer = BLACK;
+    else currState.currentPlayer = WHITE;
+
+    const std::map<int, int> maptocastle = {
+        { 'Q', CASTLE_QUEEN_WHITE },
+        { 'K', CASTLE_KING_WHITE},
+        { 'q', CASTLE_QUEEN_BLACK},
+        { 'k', CASTLE_KING_BLACK},
+    };
+
+    currState.castlingState = 0;
+    if (castlingRights != "-") {
+        for (auto c : castlingRights)
+            currState.castlingState |= maptocastle.at(c);
+    }
+
+    if (enPassantSquareFEN == "-") currState.enPassantSquare = N_SQUARES;
+    else currState.enPassantSquare = wordSquare.at(enPassantSquareFEN);
+
+    this->captured.push({N_PIECES, N_COLORS});
+
+    const Color opps = static_cast<Color>(static_cast<int>(currState.currentPlayer ^ 1));
+
+    currState.isInCheck = moveGen::isSquareAttacked(bitboards, 
+            bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
 }
 
 Board::Board() : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}

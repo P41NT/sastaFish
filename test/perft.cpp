@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     moveGen::init();
 
     std::string initialFen = argv[2];
-    std::shared_ptr<Board> b = std::make_shared<Board>(initialFen);
+    std::shared_ptr<Board> b = std::make_shared<Board>();
     
     std::vector<std::string> moves(argc - 3);
     for (int i = 3; i < argc; i++) { moves[i - 3] = (argv[i]); }
