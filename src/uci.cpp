@@ -11,7 +11,7 @@ namespace uci {
 
         while (getline(std::cin, command)) {
             if (command == "uci") inputUci();
-            else if (command == "quit") break;
+            else if (command == "quit" || command == "stop") break;
             else if (command == "isready") inputIsReady();
             else if (command.rfind("position", 0) == 0) inputPosition(b, command);
             else if (command.rfind("go", 0) == 0) outputBestMove(b);
@@ -60,7 +60,7 @@ namespace uci {
     }
 
     void outputBestMove(std::shared_ptr<Board> b) {
-        Move bestMove = search::bestMove(*b, 5);
+        Move bestMove = search::bestMove(*b);
         std::cout << "bestmove " << bestMove.getUciString() << std::endl;
     }
 
@@ -70,7 +70,7 @@ namespace uci {
         Square toSquare = wordSquare.at(mv.substr(2, 2));
 
         if (mv.size() == 5) { 
-            char promotion = mv[4]; 
+            char promotion = mv[4];
             MoveFlag cap = (b.board[toSquare].pieceType != N_PIECES) ? CAPTURE : QUIET;
             switch (promotion) {
                 case 'n':
@@ -112,8 +112,7 @@ namespace uci {
     }
 
     void gop(std::shared_ptr<Board> b) {
-        int depth; std::cin >> depth;
-        Move bestMove = search::bestMove(*b, depth);
+        Move bestMove = search::bestMove(*b);
         std::cout << "bestmove " << bestMove.getUciString() << std::endl;
     }
 

@@ -2,6 +2,7 @@
 
 #include "bitboard.hpp"
 #include "board.hpp"
+#include <array>
 #include <vector>
 
 namespace moveGen {
@@ -29,6 +30,7 @@ namespace moveGen {
     Square getAttackingSquare(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col);
     bool isSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col);
     int countSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
+    bb getAttackerbb(const std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
 
     std::vector<Move> genPsuedoLegalMoves(Board &board);
     std::vector<Move> genLegalMoves(Board &board);

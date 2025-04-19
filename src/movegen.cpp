@@ -1,5 +1,5 @@
 #include "../include/movegen.hpp"
-#include <iostream>
+#include "../include/debug.hpp"
 
 namespace moveGen{
     bb knightAttackTable[64];
@@ -213,6 +213,30 @@ namespace moveGen{
         answer += bitboard::numBits(boards[col][BISHOP] & bishopMask);
         answer += bitboard::numBits(boards[col][ROOK] & rookMask);
         answer += bitboard::numBits(boards[col][QUEEN] & (rookMask | bishopMask));
+
+        return answer;
+    }
+
+    bb getAttackerbb(const std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col) {
+        bb answer = 0ull;
+
+        bb squareBB = bitboard::setbitr(0ull, sq);
+        bb occupied = boards[0][6] | boards[1][6];
+
+        occupied &= (~squareBB);
+        switch(col) {
+            case BLACK: answer |= (whitePawnAttacks(squareBB, boards[BLACK][PAWN])); break;
+            case WHITE: answer |= (blackPawnAttacks(squareBB, boards[WHITE][PAWN])); break;
+            case N_COLORS: break;
+        }
+
+        bb bishopMask = genBishopMask(occupied, sq);
+        bb rookMask = genRookMask(occupied, sq);
+
+        answer |= (boards[col][KNIGHT] & knightAttackTable[sq]);
+        answer |= (boards[col][BISHOP] & bishopMask);
+        answer |= (boards[col][ROOK] & rookMask);
+        answer |= (boards[col][QUEEN] & (rookMask | bishopMask));
 
         return answer;
     }

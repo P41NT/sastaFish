@@ -13,7 +13,7 @@ void moveTest() {
 
     // std::cout << search::alphaBetaSearch(*b, -inf, inf, 2) << std::endl;
     // std::cout << eval::evaluateBoard(*b) << std::endl;
-    std::cout << search::bestMove(*b, 5).getUciString() << std::endl;
+    std::cout << search::bestMove(*b).getUciString() << std::endl;
 }
 
 int main() {
