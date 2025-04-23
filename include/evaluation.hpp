@@ -13,7 +13,7 @@ namespace eval {
     int materialScore(Board &b);
     std::pair<int, int> mobility(Board &b);
 
-    int quiesce(Board &b, int alpha, int beta, int depth);
+    int quiesce(Board &b, int alpha, int beta, int depth, int &nodes);
     int staticExchange(Board &b, Square sq);
 
     static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableBlack = {{
@@ -124,7 +124,7 @@ namespace eval {
            -20, -10, -10,  -5,  -5, -10, -10, -20,
            -10,   0,   5,   0,   0,   0,   0, -10,
            -10,   5,   5,   5,   5,   5,   0, -10,
-             0,   0,   5,   5,   5,   5,   0,  -5,
+            -5,   0,   5,   5,   5,   5,   0,  -5,
             -5,   0,   5,   5,   5,   5,   0,  -5,
            -10,   0,   5,   5,   5,   5,   0, -10,
            -10,   0,   0,   0,   0,   0,   0, -10,

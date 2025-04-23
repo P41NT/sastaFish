@@ -9,22 +9,17 @@ namespace eval {
         auto mobs = mobility(b);
         int mob = mobs.first - mobs.second;
 
-        if (mobs.first == 0 && b.currState.isInCheck) {
-            return 0;
-        }
-
         if (b.currState.currentPlayer == WHITE) {
-            if (mobs.first == 0 && b.currState.isInCheck) {
-                return -inf;
-            }
-        }
-        else if (b.currState.currentPlayer == BLACK) { 
-            if (mobs.second == 0 && b.currState.isInCheck) {
-                return inf; 
-            }
+            if (mobs.first == 0 && b.currState.isInCheck) return -inf;
+            else if (mobs.first == 0) return 0;
         }
 
-        return mat + mob;
+        if (b.currState.currentPlayer == BLACK) {
+            if (mobs.second == 1 && b.currState.isInCheck) return -inf;
+            else if (mobs.second == 1) return 0;
+        }
+
+        return (b.currState.currentPlayer == WHITE ? 1 : -1) * mat + mob;
     }
 
     int materialScore(Board &b) {
@@ -57,28 +52,39 @@ namespace eval {
         return mob;
     }
 
-    int quiesce(Board &b, int alpha, int beta, int depth) {
+    int quiesce(Board &b, int alpha, int beta, int depth, int &nodes) {
         int standingPat = evaluateBoard(b);
 
-        if (depth >= 2) { return standingPat; }
+        if (standingPat >= beta) {
+            nodes++;
+            return beta;
+        }
 
-        if (standingPat >= beta) return beta;
-        if (alpha < standingPat) alpha = standingPat;
+        if (depth == 0) {
+            nodes++;
+            return standingPat;
+        }
+
+        if (standingPat > alpha) alpha = standingPat;
 
         for (auto mv : moveGen::genLegalMoves(b)) {
             if (mv.isCapture()) {
                 int seeVal = staticExchange(b, mv.to()) - pieceValues[b.board[mv.from()].pieceType];
                 if (seeVal < 0) continue;
                 b.makeMove(mv);
-                int score = -quiesce(b, -beta, -alpha, depth + 1);
+                int score = -quiesce(b, -beta, -alpha, depth - 1, nodes);
                 b.unMakeMove();
 
-                if (score >= beta) return beta;
+                if (score >= beta) {
+                    nodes++;
+                    return beta;
+                }
                 if (score > alpha) alpha = score;
             }
         }
 
-        return standingPat;
+        nodes++;
+        return alpha;
     }
 
     int staticExchange(Board &b, Square sq) {

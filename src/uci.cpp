@@ -6,7 +6,7 @@
 #include <sstream>
 
 namespace uci {
-    void uciLoop(std::shared_ptr<Board> &b) {
+    void uciLoop(std::shared_ptr<Board> &b, std::shared_ptr<TTable> &tt) {
         std::string command;
 
         while (getline(std::cin, command)) {
@@ -14,8 +14,7 @@ namespace uci {
             else if (command == "quit" || command == "stop") break;
             else if (command == "isready") inputIsReady();
             else if (command.rfind("position", 0) == 0) inputPosition(b, command);
-            else if (command.rfind("go", 0) == 0) outputBestMove(b);
-            else if (command.rfind("pog", 0) == 0) gop(b);
+            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt);
             else if (command == "debug") debug(b);
         }
     } 
@@ -59,8 +58,15 @@ namespace uci {
         }
     }
 
-    void outputBestMove(std::shared_ptr<Board> b) {
-        Move bestMove = search::bestMove(*b);
+    void outputBestMove(std::shared_ptr<Board> b, std::shared_ptr<TTable> tt) {
+        int nodes = 0;
+        int score = 0;
+        int depth = 0;
+        static const int maxDepth = 6;
+        static const int maxTime = 1000;
+
+        Move bestMove = search::iterativeDeepening(*b, *tt, maxDepth, maxTime, nodes, depth, score);
+        std::cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << std::endl;
         std::cout << "bestmove " << bestMove.getUciString() << std::endl;
     }
 
@@ -109,11 +115,6 @@ namespace uci {
             return (Move(fromSquare, toSquare, EN_PASSANT));
         
         return Move(fromSquare, toSquare);
-    }
-
-    void gop(std::shared_ptr<Board> b) {
-        Move bestMove = search::bestMove(*b);
-        std::cout << "bestmove " << bestMove.getUciString() << std::endl;
     }
 
     void debug(std::shared_ptr<Board> b) {

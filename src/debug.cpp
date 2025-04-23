@@ -64,6 +64,8 @@ namespace debug {
             if (currState.castlingState & CASTLE_QUEEN_BLACK) std::cerr << "q";
             std::cerr << std::endl;
         }
+
+        std::cerr << "Zobrist Hash : " << b.zobristHash << std::endl;
     }
 
     void printBitboard(const bb &in) {

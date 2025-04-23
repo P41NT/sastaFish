@@ -30,6 +30,8 @@ public:
     std::stack<Piece> captured;
     std::stack<GameState> gameStates;
 
+    uint64_t zobristHash;
+
     GameState currState;
 
     std::array<std::array<bb, 7>, 2> bitboards;

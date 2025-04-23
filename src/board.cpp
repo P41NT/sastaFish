@@ -1,5 +1,6 @@
 #include "../include/board.hpp"
 #include "../include/movegen.hpp"
+#include "../include/zobrist.hpp"
 
 #include <cctype>
 #include <cstdlib>
@@ -79,19 +80,22 @@ Board::Board(std::string FEN) {
 
     currState.isInCheck = moveGen::isSquareAttacked(bitboards, 
             bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
+
+    this->zobristHash = zobrist::hashBoard(std::make_shared<Board>(*this));
 }
 
 void Board::makeMove(Move mv) {
     const Piece fromPiece = board[mv.from()];
 
-    // updated the from piece bitboards
     bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
     bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
 
     bitboard::toggleBit(bitboards[fromPiece.color][6], mv.from());
     bitboard::toggleBit(bitboards[fromPiece.color][6], mv.to());
 
-    // stored the capturedSquare and capturePiece
+    zobristHash ^= zobrist::hashTable[mv.from()][fromPiece.pieceType][fromPiece.color];
+    zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
+
     Square captureSquare = mv.to();
 
     if (mv.isEnPassant()) {
@@ -101,13 +105,15 @@ void Board::makeMove(Move mv) {
 
     const Piece capturePiece = board[captureSquare];
 
-    // updated the board of from and to
     board[mv.from()] = Piece{N_PIECES, N_COLORS};
     board[mv.to()] = fromPiece;
 
     if (mv.isCapture()) {
         bitboard::toggleBit(bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
         bitboard::toggleBit(bitboards[capturePiece.color][6], captureSquare);
+
+        zobristHash ^= zobrist::hashTable[captureSquare][capturePiece.pieceType][capturePiece.color];
+
         if (mv.isEnPassant()) board[captureSquare] = Piece{N_PIECES, N_COLORS};
         this->captured.push(capturePiece);
     }
@@ -115,6 +121,10 @@ void Board::makeMove(Move mv) {
         const Piece toPromote = Piece{ mv.promotionPiece(), currState.currentPlayer };
         bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.to());
         bitboard::toggleBit(bitboards[toPromote.color][toPromote.pieceType], mv.to());
+
+        zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
+        zobristHash ^= zobrist::hashTable[mv.to()][toPromote.pieceType][toPromote.color];
+
         board[mv.to()] = toPromote;
     }
 
@@ -129,6 +139,9 @@ void Board::makeMove(Move mv) {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareK);
 
+                zobristHash ^= zobrist::hashTable[rookFromSquareK][ROOK][fromPiece.color];
+                zobristHash ^= zobrist::hashTable[rookToSquareK][ROOK][fromPiece.color];
+
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
 
@@ -140,6 +153,9 @@ void Board::makeMove(Move mv) {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareQ);
 
+                zobristHash ^= zobrist::hashTable[rookFromSquareQ][ROOK][fromPiece.color];
+                zobristHash ^= zobrist::hashTable[rookToSquareQ][ROOK][fromPiece.color];
+
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
 
@@ -150,6 +166,7 @@ void Board::makeMove(Move mv) {
     }
 
     gameStates.push(currState);
+    zobristHash ^= zobrist::hashCastle[currState.castlingState];
 
     switch (fromPiece.pieceType) {
         case KING:
@@ -184,11 +201,19 @@ void Board::makeMove(Move mv) {
             default: break;
         }
     }
+    zobristHash ^= zobrist::hashCastle[currState.castlingState];
 
+    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
     currState.currentPlayer = static_cast<Color>(static_cast<int>(currState.currentPlayer) ^ 1);
+    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
+
+    if (currState.enPassantSquare != N_SQUARES) {
+        zobristHash ^= zobrist::hashEnPassant[currState.enPassantSquare];
+    }
 
     if (mv.isDoublePush()) {
         currState.enPassantSquare = static_cast<Square>(static_cast<int>((mv.from() + mv.to()) >> 1));
+        zobristHash ^= zobrist::hashEnPassant[currState.enPassantSquare];
     }
     else currState.enPassantSquare = N_SQUARES;
 
@@ -206,8 +231,14 @@ void Board::unMakeMove() {
 }
 
 void Board::unMakeMove(Move mv) {
+    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
+    zobristHash ^= zobrist::hashCastle[currState.castlingState];
+
     currState = gameStates.top();
     gameStates.pop();
+
+    zobristHash ^= zobrist::hashCastle[currState.castlingState];
+    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
 
     const Piece fromPiece = board[mv.to()];
     
@@ -218,7 +249,9 @@ void Board::unMakeMove(Move mv) {
     bitboard::toggleBit(bitboards[fromPiece.color][6], mv.from());
     bitboard::toggleBit(bitboards[fromPiece.color][6], mv.to());
 
-    // updated the board of from and to
+    zobristHash ^= zobrist::hashTable[mv.from()][fromPiece.pieceType][fromPiece.color];
+    zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
+
     board[mv.from()] = fromPiece;
     board[mv.to()] = {N_PIECES, N_COLORS};
 
@@ -231,12 +264,17 @@ void Board::unMakeMove(Move mv) {
         const Piece capturePiece = captured.top(); captured.pop();
         bitboard::toggleBit(bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
         bitboard::toggleBit(bitboards[capturePiece.color][6], captureSquare);
+        zobristHash ^= zobrist::hashTable[captureSquare][capturePiece.pieceType][capturePiece.color];
         board[captureSquare] = capturePiece;
     }
     if (mv.isPromotion()) {
         const Piece toPromote = Piece{ mv.promotionPiece(), currState.currentPlayer };
         bitboard::toggleBit(bitboards[fromPiece.color][fromPiece.pieceType], mv.from());
         bitboard::toggleBit(bitboards[toPromote.color][PAWN], mv.from());
+
+        zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
+        zobristHash ^= zobrist::hashTable[mv.to()][toPromote.pieceType][toPromote.color];
+
         board[mv.from()] = {PAWN, fromPiece.color};
     }
 
@@ -251,6 +289,9 @@ void Board::unMakeMove(Move mv) {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareK);
 
+                zobristHash ^= zobrist::hashTable[rookFromSquareK][ROOK][fromPiece.color];
+                zobristHash ^= zobrist::hashTable[rookToSquareK][ROOK][fromPiece.color];
+
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
 
@@ -261,6 +302,9 @@ void Board::unMakeMove(Move mv) {
             case CASTLE_QUEENSIDE:
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareQ);
+
+                zobristHash ^= zobrist::hashTable[rookFromSquareQ][ROOK][fromPiece.color];
+                zobristHash ^= zobrist::hashTable[rookToSquareQ][ROOK][fromPiece.color];
 
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
@@ -354,6 +398,8 @@ void Board::setFEN(std::string FEN) {
 
     currState.isInCheck = moveGen::isSquareAttacked(bitboards, 
             bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
+
+    this->zobristHash = zobrist::hashBoard(std::make_shared<Board>(*this));
 }
 
 Board::Board() : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}
