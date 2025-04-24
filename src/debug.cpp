@@ -77,7 +77,7 @@ namespace debug {
             for (int file = 0; file < 8; file++) {
                 int square = rank * 8 + file;
                 if (!file) std::cerr << 8 - rank << "\t";
-                std::cerr << bitboard::getBit(in, (Square)(rank * 8 + file)) << " ";
+                std::cerr << bitboard::getBit(in, (Square)(square)) << " ";
             }
             std::cerr << std::endl;
         }

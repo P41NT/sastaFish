@@ -1,12 +1,19 @@
 #include "../include/uci.hpp"
 #include "../include/search.hpp"
+#include "../include/colors.hpp"
 
 #include <iostream>
 #include <sstream>
 
 namespace uci {
     void uciLoop(Board &b, TTable &tt) {
+        const TermColor::Modifier bannerColor(TermColor::FG_GREEN);
+        const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
+        std::cout << bannerColor << "> uci protocol begins" << std::endl;
+        std::cout << defaultColor << std::endl;
+
         std::string command;
+        std::cerr << bannerColor << ">> " << defaultColor;
 
         while (getline(std::cin, command)) {
             if (command == "uci") inputUci();
@@ -15,6 +22,8 @@ namespace uci {
             else if (command.rfind("position", 0) == 0) inputPosition(b, command);
             else if (command.rfind("go", 0) == 0) outputBestMove(b, tt);
             else if (command == "debug") debug(b);
+
+            std::cerr << bannerColor << ">> " << defaultColor;
         }
     } 
 

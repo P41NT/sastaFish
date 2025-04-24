@@ -1,5 +1,4 @@
 #include "../include/movegen.hpp"
-#include <iostream>
 
 namespace moveGen{
     bb knightAttackTable[64];
@@ -256,7 +255,6 @@ namespace moveGen{
         if (board.currState.isInCheck) {
             int countCheck = countSquareAttacked(board.bitboards, kingSquare, opps);
             if (countCheck == 1) {
-                Square attacker = getAttackingSquare(board.bitboards, kingSquare, opps);
                 for (auto move :  psuedoLegal) {
                     if (move.isCastle()) continue;
                     if (board.board[move.from()].pieceType == KING) {
@@ -412,7 +410,6 @@ namespace moveGen{
         // generate non-pawn moves
         for (PieceType p = KNIGHT; p != N_PIECES; p = static_cast<PieceType>(static_cast<int>(p) + 1)) {
             temp = board.bitboards[side][p];
-            Piece currPiece{p, side};
             while (temp) {
                 Square from = bitboard::getLsbPop(temp);
                 bb attackMap;
@@ -469,7 +466,7 @@ namespace moveGen{
             Square from = bitboard::getLsbPop(temp);
             bb pawnMask = bitboard::setbitr(0ull, from);
             bb pawnPush, pawnAttack;
-            bb promotionRange;
+            bb promotionRange = 0ull;
 
             bb enPassant;
 
