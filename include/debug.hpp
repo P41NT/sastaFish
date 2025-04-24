@@ -8,6 +8,6 @@ namespace debug {
         return pieceCharacters[p.color][p.pieceType]; 
     }
     void printMove(const Board &b, const Move &mv);
-    void printBoard(const Board &b);
+    void printBoard(Board &b);
     void printBitboard(const bb &in);
 }

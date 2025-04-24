@@ -1,5 +1,5 @@
 #include "../include/movegen.hpp"
-#include "../include/debug.hpp"
+#include <iostream>
 
 namespace moveGen{
     bb knightAttackTable[64];

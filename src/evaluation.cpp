@@ -19,7 +19,7 @@ namespace eval {
             else if (mobs.second == 1) return 0;
         }
 
-        return (b.currState.currentPlayer == WHITE ? 1 : -1) * mat + mob;
+        return (b.currState.currentPlayer == WHITE ? 1 : -1) * (mat + mob);
     }
 
     int materialScore(Board &b) {
@@ -33,7 +33,7 @@ namespace eval {
                     int pieceVal = pieceValues[piece];
                     pieceVal += (side == WHITE) ? pieceSquareTableWhite[piece][currSquare] :
                                                   pieceSquareTableBlack[piece][currSquare];
-                    score += (side == WHITE ? 1 : -1) * pieceValues[piece];
+                    score += (side == WHITE ? 1 : -1) * pieceVal;
                 }
             }
         }
@@ -46,45 +46,10 @@ namespace eval {
         b.currState.currentPlayer = WHITE;
         mob.first += moveGen::genLegalMoves(b).size();
         b.currState.currentPlayer = BLACK;
-        mob.second -= moveGen::genLegalMoves(b).size();
+        mob.second += moveGen::genLegalMoves(b).size();
         b.currState.currentPlayer = prevCol;
 
         return mob;
-    }
-
-    int quiesce(Board &b, int alpha, int beta, int depth, int &nodes) {
-        int standingPat = evaluateBoard(b);
-
-        if (standingPat >= beta) {
-            nodes++;
-            return beta;
-        }
-
-        if (depth == 0) {
-            nodes++;
-            return standingPat;
-        }
-
-        if (standingPat > alpha) alpha = standingPat;
-
-        for (auto mv : moveGen::genLegalMoves(b)) {
-            if (mv.isCapture()) {
-                int seeVal = staticExchange(b, mv.to()) - pieceValues[b.board[mv.from()].pieceType];
-                if (seeVal < 0) continue;
-                b.makeMove(mv);
-                int score = -quiesce(b, -beta, -alpha, depth - 1, nodes);
-                b.unMakeMove();
-
-                if (score >= beta) {
-                    nodes++;
-                    return beta;
-                }
-                if (score > alpha) alpha = score;
-            }
-        }
-
-        nodes++;
-        return alpha;
     }
 
     int staticExchange(Board &b, Square sq) {

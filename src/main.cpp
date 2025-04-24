@@ -3,13 +3,18 @@
 #include "../include/board.hpp"
 #include "../include/zobrist.hpp"
 #include "../include/ttable.hpp"
-#include <memory>
+
+#include <iostream>
 
 int main() {
+
+    std::cout << "starting" << std::endl;
+
     moveGen::init();
     zobrist::init();
-    std::shared_ptr<Board> b = std::make_shared<Board>();
-    std::shared_ptr<TTable> tt = std::make_shared<TTable>();
-    uci::uciLoop(b, tt);
+    Board *b = new Board();
+    TTable *tt = new TTable();
+    uci::uciLoop(*b, *tt);
+
     return 0;
 }

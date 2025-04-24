@@ -81,7 +81,7 @@ Board::Board(std::string FEN) {
     currState.isInCheck = moveGen::isSquareAttacked(bitboards, 
             bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
 
-    this->zobristHash = zobrist::hashBoard(std::make_shared<Board>(*this));
+    this->zobristHash = zobrist::hashBoard(*this);
 }
 
 void Board::makeMove(Move mv) {
@@ -316,7 +316,7 @@ void Board::unMakeMove(Move mv) {
     }
 }
 
-void Board::setFEN(std::string FEN) {
+void Board::setFEN(std::string &FEN) {
     std::stringstream split1(FEN);
     std::string board;
     split1 >> board;
@@ -399,7 +399,7 @@ void Board::setFEN(std::string FEN) {
     currState.isInCheck = moveGen::isSquareAttacked(bitboards, 
             bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
 
-    this->zobristHash = zobrist::hashBoard(std::make_shared<Board>(*this));
+    this->zobristHash = zobrist::hashBoard(*this);
 }
 
 Board::Board() : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}

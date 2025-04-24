@@ -28,7 +28,7 @@ namespace bitboard {
 
     Square getLsb(const bb &in) {
         bb lsb_bb = in & (-in);
-        return (Square)bitScanLookup[in % 67];
+        return (Square)bitScanLookup[lsb_bb % 67];
     }
 
     Square getLsbPop(bb &in) {

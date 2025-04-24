@@ -3,7 +3,6 @@
 #include "board.hpp"
 
 #include <cstdint>
-#include <memory>
 
 namespace zobrist {
     extern uint64_t hashTable[64][6][2];
@@ -12,5 +11,5 @@ namespace zobrist {
     extern uint64_t hashSideToMove[2];
 
     void init();
-    uint64_t hashBoard(std::shared_ptr<Board> b);
+    uint64_t hashBoard(const Board &b);
 };

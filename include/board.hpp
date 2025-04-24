@@ -44,6 +44,6 @@ public:
     void unMakeMove(Move move);
     void unMakeMove();
 
-    void setFEN(std::string);
+    void setFEN(std::string &FEN);
 };
 

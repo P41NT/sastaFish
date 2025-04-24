@@ -1,7 +1,9 @@
 #include "../include/debug.hpp"
 #include "../include/colors.hpp"
+#include "../include/evaluation.hpp"
 
 #include <iostream>
+#include <memory>
 
 namespace debug {
     void printMove(const Board &b, const Move &mv) {
@@ -37,7 +39,7 @@ namespace debug {
         std::cerr << "]" << std::endl;
     }
 
-    void printBoard(const Board &b) {
+    void printBoard(Board &b) {
         for (int rank = 0; rank < 8; rank++) {
             for (int file = 0; file < 8; file++) {
                 if (!file) std::cerr << 8 - rank << "\t";
@@ -66,6 +68,8 @@ namespace debug {
         }
 
         std::cerr << "Zobrist Hash : " << b.zobristHash << std::endl;
+
+        std::cerr << "Static Evaluation : " << eval::evaluateBoard(b) << std::endl;
     }
 
     void printBitboard(const bb &in) {

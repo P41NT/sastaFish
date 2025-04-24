@@ -2,20 +2,22 @@
 
 #include "board.hpp"
 #include "ttable.hpp"
+#include "../include/debug.hpp"
 
-#include <memory>
 #include <string>
 
 namespace uci {
     static const std::string engineName = "sastaFish";
     static const std::string engineAuthor = "shobwq";
 
-    void uciLoop(std::shared_ptr<Board> &b, std::shared_ptr<TTable> &tt);
+    void uciLoop(Board &b, TTable &tt);
     void inputUci();
     void inputIsReady();
-    void inputPosition(std::shared_ptr<Board> &b, const std::string command);
-    void outputBestMove(std::shared_ptr<Board> b, std::shared_ptr<TTable> tt);
+    void inputPosition(Board &b, const std::string &command);
+    void outputBestMove(Board &b, TTable &tt);
     Move parseMove(Board &b, const std::string &mv);
 
-    void debug(std::shared_ptr<Board> b);
+    inline void debug(Board &b) {
+        debug::printBoard(b);
+    }
 }

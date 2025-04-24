@@ -4,12 +4,18 @@
 #include "../include/movegen.hpp"
 #include "../include/ttable.hpp"
 
+#include <iostream>
+
+#include <atomic>
+#include <thread>
 #include <chrono>
 
 namespace search {
-    int alphaBetaSearch(Board &b, TTable &tt, int alpha, int beta, int depth, int &nodes) {
-        TTableEntry *entry = tt.getEntry(b.zobristHash);
+    int alphaBetaSearch(Board &b, TTable &tt, int alpha, int beta, int depth, int &nodes, 
+            std::atomic<bool> &stopSearch) {
 
+        nodes++;
+        TTableEntry *entry = tt.getEntry(b.zobristHash);
         Move bestMove;
         if (entry != nullptr && entry->depth >= depth) {
             switch (entry->flag) {
@@ -28,8 +34,7 @@ namespace search {
 
         int originalAlpha = alpha;
 
-        if (depth == 0) 
-            return eval::quiesce(b, alpha, beta, 2, nodes);
+        if (depth == 0) return quiesce(b, alpha, beta, 3, stopSearch);
 
         for (auto mv : moveGen::genLegalMoves(b)) {
             if (mv.isCapture()) {
@@ -38,8 +43,10 @@ namespace search {
                 if (seeVal < 0) continue;
             }
 
+            if (stopSearch) break;
+
             b.makeMove(mv);
-            int score = -alphaBetaSearch(b, tt, -beta, -alpha, depth - 1, nodes);
+            int score = -alphaBetaSearch(b, tt, -beta, -alpha, depth - 1, nodes, stopSearch);
             b.unMakeMove();
 
             if (score > alpha) {
@@ -47,7 +54,6 @@ namespace search {
                 bestMove = mv;
             }
             if (alpha >= beta) {
-                // nodes++;
                 break;
             }
         }
@@ -65,11 +71,13 @@ namespace search {
         Move best;
         score = -inf;
 
+        std::atomic<bool> stopSearch = false;
+
         depth = 4;
         std::vector<Move> legalmoves = moveGen::genLegalMoves(b);
         for (auto mv : legalmoves) {
             b.makeMove(mv);
-            int eval = -alphaBetaSearch(b, tt, -inf, inf, depth - 1, nodes);
+            int eval = -alphaBetaSearch(b, tt, -inf, inf, depth - 1, nodes, stopSearch);
             b.unMakeMove();
 
             if (eval > score) {
@@ -80,14 +88,16 @@ namespace search {
         return best;
     }
 
-    Move iterativeDeepening(Board &b, TTable &tt, int maxDepth, int maxTime, 
-           int &nodes, int &depth, int &score) {
+    Move iterativeDeepening(Board &b, TTable &tt, int maxDepth, int maxTime, int &nodes, int &depth, int &score) {
         Move bestMove;
         int bestValue = -inf;
 
         auto start = std::chrono::high_resolution_clock::now();
+        auto deadline = start + std::chrono::milliseconds(maxTime);
 
         nodes = 0;
+
+        std::atomic<bool> stopSearch = false;
 
         for (depth = 1; depth <= maxDepth; depth++) {
             bestValue = -inf;
@@ -95,26 +105,54 @@ namespace search {
 
             if (bestMove.move != 0000) {
                 b.makeMove(bestMove);
-                int eval = -alphaBetaSearch(b, tt, -inf, inf, depth - 1, nodes);
+                int eval = -alphaBetaSearch(b, tt, -inf, inf, depth - 1, nodes, stopSearch);
                 bestValue = eval;
+
                 b.unMakeMove();
             }
 
             for (auto mv : legalmoves) {
                 b.makeMove(mv);
-                int eval = -alphaBetaSearch(b, tt, -inf, inf, depth - 1, nodes);
+                int eval = -alphaBetaSearch(b, tt, -inf, inf, depth - 1, nodes, stopSearch);
                 b.unMakeMove();
+
                 if (eval > bestValue) {
                     bestValue = eval;
                     bestMove = mv;
                 }
             }
-            auto end = std::chrono::high_resolution_clock::now();
-            int elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-            if (elapsed > maxTime) break;
         }
+        depth--;
 
         score = bestValue;
         return bestMove;
+    }
+
+    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
+        int standingPat = eval::evaluateBoard(b);
+
+        if (standingPat >= beta) return beta;
+        if (depth == 0) return standingPat;
+        if (standingPat > alpha) alpha = standingPat;
+
+        for (auto mv : moveGen::genLegalMoves(b)) {
+
+            if (stopSearch) break;
+
+            if (mv.isCapture()) {
+                int seeVal = eval::staticExchange(b, mv.to()) - eval::pieceValues[b.board[mv.from()].pieceType];
+                if (seeVal < 0) continue;
+                b.makeMove(mv);
+                int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
+                b.unMakeMove();
+
+                if (score >= beta) {
+                    return beta;
+                }
+                if (score > alpha) alpha = score;
+            }
+        }
+
+        return alpha;
     }
 }

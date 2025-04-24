@@ -23,17 +23,17 @@ namespace zobrist {
         for (int side = 0; side < 2; side++) hashSideToMove[side] = rng();
     }
 
-    uint64_t hashBoard(std::shared_ptr<Board> b) {
+    uint64_t hashBoard(const Board &b) {
         uint64_t hash = 0;
         for (int i = 0; i < 64; ++i) {
-            if (b->board[i].pieceType != PieceType::N_PIECES) {
-                int p = static_cast<int>(b->board[i].pieceType);
-                int c = static_cast<int>(b->board[i].color);
+            if (b.board[i].pieceType != PieceType::N_PIECES) {
+                int p = static_cast<int>(b.board[i].pieceType);
+                int c = static_cast<int>(b.board[i].color);
                 hash ^= hashTable[i][p][c];
             }
         }
-        hash ^= hashCastle[b->currState.castlingState];
-        hash ^= hashEnPassant[b->currState.enPassantSquare];
+        hash ^= hashCastle[b.currState.castlingState];
+        hash ^= hashEnPassant[b.currState.enPassantSquare];
         return hash;
     }
 }

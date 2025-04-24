@@ -1,12 +1,11 @@
 #include "../include/uci.hpp"
 #include "../include/search.hpp"
-#include "../include/debug.hpp"
 
 #include <iostream>
 #include <sstream>
 
 namespace uci {
-    void uciLoop(std::shared_ptr<Board> &b, std::shared_ptr<TTable> &tt) {
+    void uciLoop(Board &b, TTable &tt) {
         std::string command;
 
         while (getline(std::cin, command)) {
@@ -30,7 +29,7 @@ namespace uci {
         std::cout << "readyok" << std::endl;
     }
 
-    void inputPosition(std::shared_ptr<Board> &b, const std::string command) {
+    void inputPosition(Board &b, const std::string &command) {
         std::istringstream iss(command);
 
         std::string position;
@@ -38,7 +37,8 @@ namespace uci {
         iss >> position >> option;
 
         if (option == "startpos") {
-            b->setFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+            static std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+            b.setFEN(defaultFEN);
         }
         else if (option == "fen") {
             std::string FEN; 
@@ -47,25 +47,25 @@ namespace uci {
             while (FENWords-- && iss >> FENWord) {
                 FEN += FENWord + " ";
             }
-            b->setFEN(FEN);
+            b.setFEN(FEN);
         }
 
         if (iss >> option && option == "moves") {
             std::string move;
             while (iss >> move) {
-                b->makeMove(parseMove(*b, move));
+                b.makeMove(parseMove(b, move));
             }
         }
     }
 
-    void outputBestMove(std::shared_ptr<Board> b, std::shared_ptr<TTable> tt) {
+    void outputBestMove(Board &b, TTable &tt) {
         int nodes = 0;
         int score = 0;
         int depth = 0;
-        static const int maxDepth = 6;
+        static const int maxDepth = 5;
         static const int maxTime = 1000;
 
-        Move bestMove = search::iterativeDeepening(*b, *tt, maxDepth, maxTime, nodes, depth, score);
+        Move bestMove = search::iterativeDeepening(b, tt, maxDepth, maxTime, nodes, depth, score);
         std::cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << std::endl;
         std::cout << "bestmove " << bestMove.getUciString() << std::endl;
     }
@@ -115,9 +115,5 @@ namespace uci {
             return (Move(fromSquare, toSquare, EN_PASSANT));
         
         return Move(fromSquare, toSquare);
-    }
-
-    void debug(std::shared_ptr<Board> b) {
-        debug::printBoard(*b);
     }
 }
