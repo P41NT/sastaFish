@@ -1,0 +1,11 @@
+build/
+*.swp
+*.tmp
+.DS_Store
+
+*.o
+*.out
+*.exe
+*.a
+*.so
+
