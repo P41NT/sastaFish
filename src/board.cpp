@@ -1,7 +1,9 @@
 #include "../include/board.hpp"
 #include "../include/movegen.hpp"
 #include "../include/zobrist.hpp"
+#include "../include/debug.hpp"
 
+#include <iostream>
 #include <cctype>
 #include <cstdlib>
 #include <sstream>
@@ -96,6 +98,7 @@ void Board::makeMove(Move mv) {
     zobristHash ^= zobrist::hashTable[mv.from()][fromPiece.pieceType][fromPiece.color];
     zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
 
+
     Square captureSquare = mv.to();
 
     if (mv.isEnPassant()) {
@@ -132,6 +135,7 @@ void Board::makeMove(Move mv) {
     const Square rookToSquareK = static_cast<Square>(static_cast<int>(mv.to() - 1));
     const Square rookFromSquareQ = static_cast<Square>(static_cast<int>(mv.from() - 4));
     const Square rookToSquareQ = static_cast<Square>(static_cast<int>(mv.to() + 1));
+
 
     if (mv.isCastle()) {
         switch (mv.move >> 12) {
@@ -240,6 +244,15 @@ void Board::unMakeMove(Move mv) {
     zobristHash ^= zobrist::hashCastle[currState.castlingState];
     zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
 
+    if (currState.enPassantSquare != N_SQUARES) {
+        zobristHash ^= zobrist::hashEnPassant[currState.enPassantSquare];
+    }
+
+    if (mv.isDoublePush()) {
+        Square enPassantSquare = static_cast<Square>(static_cast<int>((mv.from() + mv.to()) >> 1));
+        zobristHash ^= zobrist::hashEnPassant[enPassantSquare];
+    }
+
     const Piece fromPiece = board[mv.to()];
     
     // updated the from piece bitboards
@@ -251,6 +264,7 @@ void Board::unMakeMove(Move mv) {
 
     zobristHash ^= zobrist::hashTable[mv.from()][fromPiece.pieceType][fromPiece.color];
     zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
+
 
     board[mv.from()] = fromPiece;
     board[mv.to()] = {N_PIECES, N_COLORS};
@@ -277,6 +291,7 @@ void Board::unMakeMove(Move mv) {
 
         board[mv.from()] = {PAWN, fromPiece.color};
     }
+
 
     const Square rookFromSquareK = static_cast<Square>(static_cast<int>(mv.from() + 3));
     const Square rookToSquareK = static_cast<Square>(static_cast<int>(mv.to() - 1));

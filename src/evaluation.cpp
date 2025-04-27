@@ -3,6 +3,9 @@
 #include "../include/bitboard.hpp"
 #include <queue>
 
+#include "../include/debug.hpp"
+#include <iostream>
+
 namespace eval {
     int evaluateBoard(Board &b) {
         int mat = materialScore(b) * materialWeight;
@@ -15,8 +18,10 @@ namespace eval {
         }
 
         if (b.currState.currentPlayer == BLACK) {
-            if (mobs.second == 1 && b.currState.isInCheck) return -inf;
-            else if (mobs.second == 1) return 0;
+            if (mobs.second == 0 && b.currState.isInCheck) {
+                return -inf;
+            }
+            else if (mobs.second == 0) return 0;
         }
 
         return (b.currState.currentPlayer == WHITE ? 1 : -1) * (mat + mob);

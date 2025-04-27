@@ -10,11 +10,11 @@ namespace uci {
     static const std::string engineName = "sastaFish";
     static const std::string engineAuthor = "shobwq";
 
-    void uciLoop(Board &b, TTable &tt);
+    void uciLoop(Board &b, TTable &tt, RepetitionTable &rt);
     void inputUci();
-    void inputIsReady();
-    void inputPosition(Board &b, const std::string &command);
-    void outputBestMove(Board &b, TTable &tt);
+    void inputIsReady(RepetitionTable &rt);
+    void inputPosition(Board &b, const std::string &command, RepetitionTable &rt);
+    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt);
     Move parseMove(Board &b, const std::string &mv);
 
     inline void debug(Board &b) {

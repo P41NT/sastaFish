@@ -2,13 +2,18 @@
 #include "../include/search.hpp"
 #include "../include/colors.hpp"
 
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 
 namespace uci {
-    void uciLoop(Board &b, TTable &tt) {
+    std::stack<uint64_t> initialStack;
+
+    void uciLoop(Board &b, TTable &tt, RepetitionTable &rt) {
         const TermColor::Modifier bannerColor(TermColor::FG_GREEN);
         const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
+        const TermColor::Modifier errorColor(TermColor::FG_RED);
+
         std::cout << bannerColor << "> uci protocol begins" << std::endl;
         std::cout << defaultColor << std::endl;
 
@@ -18,10 +23,13 @@ namespace uci {
         while (getline(std::cin, command)) {
             if (command == "uci") inputUci();
             else if (command == "quit" || command == "stop") break;
-            else if (command == "isready") inputIsReady();
-            else if (command.rfind("position", 0) == 0) inputPosition(b, command);
-            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt);
+            else if (command == "isready") inputIsReady(rt);
+            else if (command.rfind("position", 0) == 0) inputPosition(b, command, rt);
+            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt);
             else if (command == "debug") debug(b);
+            else {
+                std::cerr << errorColor << "> Unknown command: " << command << defaultColor << std::endl;
+            }
 
             std::cerr << bannerColor << ">> " << defaultColor;
         }
@@ -34,11 +42,11 @@ namespace uci {
         std::cout << "uciok" << std::endl;
     }
 
-    void inputIsReady() {
+    void inputIsReady(RepetitionTable &rt) {
         std::cout << "readyok" << std::endl;
     }
 
-    void inputPosition(Board &b, const std::string &command) {
+    void inputPosition(Board &b, const std::string &command, RepetitionTable &rt) {
         std::istringstream iss(command);
 
         std::string position;
@@ -48,6 +56,8 @@ namespace uci {
         if (option == "startpos") {
             static std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
             b.setFEN(defaultFEN);
+            rt.increment(b.zobristHash);
+            initialStack.push(b.zobristHash);
         }
         else if (option == "fen") {
             std::string FEN; 
@@ -57,26 +67,38 @@ namespace uci {
                 FEN += FENWord + " ";
             }
             b.setFEN(FEN);
+            rt.increment(b.zobristHash);
+            initialStack.push(b.zobristHash);
         }
 
         if (iss >> option && option == "moves") {
             std::string move;
             while (iss >> move) {
                 b.makeMove(parseMove(b, move));
+                std::cerr << b.zobristHash << std::endl;
+                rt.increment(b.zobristHash);
+                initialStack.push(b.zobristHash);
             }
         }
     }
 
-    void outputBestMove(Board &b, TTable &tt) {
+    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt) {
         int nodes = 0;
         int score = 0;
         int depth = 0;
-        static const int maxDepth = 5;
+        static const int maxDepth = 10;
         static const int maxTime = 1000;
 
-        Move bestMove = search::iterativeDeepening(b, tt, maxDepth, maxTime, nodes, depth, score);
+        debug::printBoard(b);
+
+        Move bestMove = search::iterativeDeepening(b, tt, rt, maxDepth, maxTime, nodes, depth, score);
         std::cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << std::endl;
         std::cout << "bestmove " << bestMove.getUciString() << std::endl;
+
+        while (!initialStack.empty()) {
+            rt.decrement(initialStack.top());
+            initialStack.pop();
+        }
     }
 
 

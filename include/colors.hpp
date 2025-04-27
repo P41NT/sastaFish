@@ -17,6 +17,7 @@ namespace TermColor {
         BG_CYAN     = 46,
         BG_YELLOW   = 43,
         BOLD        = 1,
+        UNBOLD      = 0,
     };
     class Modifier {
         Code code;

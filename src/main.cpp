@@ -9,7 +9,7 @@
 
 void printBanner() {
     const TermColor::Modifier bannerColor(TermColor::FG_BLUE);
-    const TermColor::Modifier authorColor(TermColor::FG_MAGENTA);
+    const TermColor::Modifier authorColor(TermColor::FG_CYAN);
     const TermColor::Modifier versionColor(TermColor::FG_DEFAULT);
     const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
 
@@ -21,8 +21,8 @@ void printBanner() {
     /____/\__,_/____/\__/\__,_/_/   /_/____/_/ /_/
     )";
 
-    std::string author = "Author:\tShawn Theo Moses ";
-    std::string version = "Version:\t0.1.0";
+    std::string author = "Author:\t\tShawn Theo Moses ";
+    std::string version = "Version:\t0.2.0";
 
     std::cout << bannerColor << banner << std::endl;
     std::cout << authorColor << author << std::endl;
@@ -38,7 +38,9 @@ int main() {
     zobrist::init();
     Board *b = new Board();
     TTable *tt = new TTable();
-    uci::uciLoop(*b, *tt);
+    RepetitionTable *rt = new RepetitionTable();
+
+    uci::uciLoop(*b, *tt, *rt);
 
     return 0;
 }

@@ -3,7 +3,6 @@
 #include "../include/evaluation.hpp"
 
 #include <iostream>
-#include <memory>
 
 namespace debug {
     void printMove(const Board &b, const Move &mv) {

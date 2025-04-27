@@ -6,8 +6,8 @@
 
 namespace eval {
     static constexpr std::array<int, 6> pieceValues = { 100, 300, 325, 500, 900, 0 };
-    static const int materialWeight = 3;
-    static const int mobilityWeight = 2;
+    static const int materialWeight = 1;
+    static const int mobilityWeight = 0;
 
     int evaluateBoard(Board &b);
     int materialScore(Board &b);
@@ -15,7 +15,7 @@ namespace eval {
 
     int staticExchange(Board &b, Square sq);
 
-    static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableBlack = {{
+    static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableWhite = {{
         { 
                0,   0,   0,   0,   0,   0,   0,   0,
               50,  50,  50,  50,  50,  50,  50,  50,
@@ -78,7 +78,7 @@ namespace eval {
        }
     }};
 
-    static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableWhite = {{
+    static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableBlack = {{
         {
              0,   0,   0,   0,   0,   0,   0,   0,
              5,  10,  10, -20, -20,  10,  10,   5,
