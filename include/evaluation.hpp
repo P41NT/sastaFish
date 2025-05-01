@@ -7,7 +7,7 @@
 namespace eval {
     static constexpr std::array<int, 6> pieceValues = { 100, 300, 325, 500, 900, 0 };
     static const int materialWeight = 1;
-    static const int mobilityWeight = 0;
+    static const int mobilityWeight = 4;
 
     int evaluateBoard(Board &b);
     int materialScore(Board &b);

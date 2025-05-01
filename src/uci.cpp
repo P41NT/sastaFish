@@ -3,9 +3,11 @@
 #include "../include/colors.hpp"
 #include "../include/openingbook.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <sstream>
+#include <chrono>
 
 namespace uci {
     std::stack<uint64_t> initialStack;
@@ -21,19 +23,25 @@ namespace uci {
         std::string command;
         std::cerr << bannerColor << ">> " << defaultColor;
 
+
         while (getline(std::cin, command)) {
+            auto start = std::chrono::high_resolution_clock::now();
+
             if (command == "uci") inputUci();
             else if (command == "quit" || command == "stop") break;
             else if (command == "isready") inputIsReady(rt);
             else if (command.rfind("position", 0) == 0) inputPosition(b, command, rt);
-            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt, bk);
+            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt, bk, command);
             else if (command == "debug") debug(b);
             else {
                 std::cerr << errorColor << "> Unknown command: " << command << defaultColor << std::endl;
             }
 
+            std::cerr << errorColor << "[" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now() - start).count() << "ms] ";
             std::cerr << bannerColor << ">> " << defaultColor;
         }
+
     } 
 
     void inputUci() {
@@ -82,12 +90,46 @@ namespace uci {
         }
     }
 
-    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk) {
+    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk, std::string &command) {
+        std::istringstream iss(command);
+
+        std::string go;
+        std::string option;
+
+        iss >> go >> option;
+
         int nodes = 0;
         int score = 0;
         int depth = 0;
-        static const int maxDepth = 6;
-        static const int maxTime = 1000;
+        int maxDepth = 30;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        int numMoves = b.moves.size();
+        int maxTime = 1000;
+
+        if (option == "infinite") {
+            maxTime = 10000;
+        }
+        else if (option == "depth") {
+            iss >> maxDepth;
+            maxTime *= 10;
+        }
+        else if (option == "movetime") {
+            iss >> maxTime;
+        }
+        else if (option == "wtime") {
+            if (b.currState.currentPlayer == WHITE) {
+                iss >> maxTime;
+                maxTime /= 40;
+            }
+            else {
+                iss >> go >> option >> maxTime;
+                maxTime /= 40;
+            }
+        }
+
+        std::cout << maxTime << std::endl;
 
         Move bestMove = search::bestMove(b, tt, rt, bk, maxDepth, maxTime, nodes, depth, score);
         std::cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << std::endl;

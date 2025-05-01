@@ -41,7 +41,7 @@ int main() {
 
     TTable *tt = new TTable();
     RepetitionTable *rt = new RepetitionTable();
-    openingbook::Book *bk = new openingbook::Book("../data/Human.bin");
+    openingbook::Book *bk = new openingbook::Book("../data/gm2001.bin");
 
     uci::uciLoop(*b, *tt, *rt, *bk);
 

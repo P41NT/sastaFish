@@ -8,8 +8,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 #include <chrono>
+#include <random>
 #include <iostream>
 
 namespace search {
@@ -41,15 +44,13 @@ namespace search {
         std::vector<Move> legalMoves = moveGen::genLegalMoves(b);
         if (legalMoves.empty()) {
             if (b.currState.isInCheck) return -inf + 1;
-            else {
-                return 0;
-            }
+            else return 0;
         }
 
         if (depth == 0) return quiesce(b, alpha, beta, 0, stopSearch);
 
         for (auto mv : legalMoves) {
-            // if (stopSearch) break;
+            if (stopSearch) break;
 
             if (mv.isCapture()) {
                 int seeVal = eval::staticExchange(b, mv.to()) - 
@@ -83,12 +84,15 @@ namespace search {
     Move bestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book& bk, int maxDepth,
             int maxTime, int &nodes, int &depth, int &score) {
         
+        std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+
         std::vector<openingbook::PolyglotEntry> entries = bk.getEntries(b.polyglotHash);
         if (entries.size() != 0) {
-            int nextMove = rand() % std::min(3, (int)entries.size());
-            return openingbook::convertToMove(entries[0], b);
+            int nextMove = rng() % std::min(5, (int)entries.size());
+            return openingbook::convertToMove(entries[nextMove], b);
         }
-        return iterativeDeepening(b, tt, rt, maxDepth, maxTime, nodes, depth, score);
+        Move result = iterativeDeepening(b, tt, rt, maxDepth, maxTime, nodes, depth, score);
+        return result;
     }
 
     Move iterativeDeepening(Board &b, TTable &tt, RepetitionTable &rt, int maxDepth, int maxTime, 
@@ -97,23 +101,19 @@ namespace search {
         Move bestMove;
         int bestValue = -inf;
 
-
         auto start = std::chrono::high_resolution_clock::now();
-        auto deadline = start + std::chrono::milliseconds(maxTime);
-
-        debug::printBoard(b);
+        auto deadline = start + std::chrono::milliseconds(maxTime) - std::chrono::milliseconds(50);
 
         nodes = 0;
 
         std::atomic<bool> stopSearch = false;
+        std::mutex mtx;
+        std::condition_variable conditionVar;
 
         std::thread searchThread([&]() {
-            while (!stopSearch) {
-                auto now = std::chrono::high_resolution_clock::now();
-                if (now >= deadline) {
-                    stopSearch = true;
-                    break;
-                }
+            std::unique_lock<std::mutex> lock(mtx);
+            if (!conditionVar.wait_until(lock, deadline, [&]() { return stopSearch.load(); })) {
+                stopSearch = true;
             }
         });
 
@@ -151,19 +151,18 @@ namespace search {
                 rt.decrement(b.zobristHash);
                 b.unMakeMove();
 
-                std::cerr << depth << " " << mv.getUciString() << " " << eval << std::endl;
-
                 if (stopSearch) {
                     searchCut = true;
                     break;
                 }
+
+                std::cerr << depth << " " << mv.getUciString() << " " << eval << std::endl;
 
                 if (eval > alpha) {
                     alpha = eval;
                     iterBestMove = mv;
                 }
             }
-            std::cerr << std::endl;
 
             if (!searchCut) {
                 bestValue = alpha;
@@ -172,6 +171,10 @@ namespace search {
             if (stopSearch) break;
         }
 
+        std::cout << std::endl;
+
+        stopSearch = true;
+        conditionVar.notify_one();
         searchThread.join();
         depth--;
 

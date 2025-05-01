@@ -15,7 +15,7 @@ namespace uci {
     void inputUci();
     void inputIsReady(RepetitionTable &rt);
     void inputPosition(Board &b, const std::string &command, RepetitionTable &rt);
-    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk);
+    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk, std::string &command);
     Move parseMove(Board &b, const std::string &mv);
 
     inline void debug(Board &b) {
