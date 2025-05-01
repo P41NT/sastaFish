@@ -3,14 +3,11 @@
 #include "../include/bitboard.hpp"
 #include <queue>
 
-#include "../include/debug.hpp"
-#include <iostream>
-
 namespace eval {
     int evaluateBoard(Board &b) {
         int mat = materialScore(b) * materialWeight;
         auto mobs = mobility(b);
-        int mob = mobs.first - mobs.second;
+        int mob = mobilityWeight * (mobs.first - mobs.second);
 
         if (b.currState.currentPlayer == WHITE) {
             if (mobs.first == 0 && b.currState.isInCheck) return -inf;
@@ -28,16 +25,26 @@ namespace eval {
     }
 
     int materialScore(Board &b) {
+        bb minormajorPieces = b.bitboards[WHITE][KNIGHT] | b.bitboards[WHITE][BISHOP] |
+                              b.bitboards[BLACK][KNIGHT] | b.bitboards[BLACK][BISHOP] |
+                              b.bitboards[WHITE][ROOK] | b.bitboards[WHITE][QUEEN] |
+                              b.bitboards[BLACK][ROOK] | b.bitboards[BLACK][QUEEN];
+
+
+        int numPieces = bitboard::numBits(minormajorPieces);
+        bool endgame = (numPieces <= 4);
+
         int score = 0;
         for (auto side : {WHITE,  BLACK}) {
             for (int piece = 0; piece < 6; piece++) {
                 bb temp = b.bitboards[side][piece];
-
                 while (temp) {
                     Square currSquare = bitboard::getLsbPop(temp);
                     int pieceVal = pieceValues[piece];
-                    pieceVal += (side == WHITE) ? pieceSquareTableWhite[piece][currSquare] :
-                                                  pieceSquareTableBlack[piece][currSquare];
+                    int p = piece;
+                    if (p == 5 && endgame) p = 6;
+                    pieceVal += (side == WHITE) ? pieceSquareTableWhite[p][currSquare] :
+                                                  pieceSquareTableBlack[p][currSquare];
                     score += (side == WHITE ? 1 : -1) * pieceVal;
                 }
             }
@@ -50,6 +57,7 @@ namespace eval {
         std::pair<int, int> mob;
         b.currState.currentPlayer = WHITE;
         mob.first += moveGen::genLegalMoves(b).size();
+
         b.currState.currentPlayer = BLACK;
         mob.second += moveGen::genLegalMoves(b).size();
         b.currState.currentPlayer = prevCol;

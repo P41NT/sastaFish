@@ -3,6 +3,8 @@
 #include "../include/evaluation.hpp"
 
 #include <iostream>
+#include <cstdio>
+#include <sstream>
 
 namespace debug {
     void printMove(const Board &b, const Move &mv) {
@@ -66,7 +68,13 @@ namespace debug {
             std::cerr << std::endl;
         }
 
-        std::cerr << "Zobrist Hash : " << b.zobristHash << std::endl;
+        std::stringstream zobristSS;
+        std::stringstream polyglotSS;
+        zobristSS << std::hex << b.zobristHash;
+        polyglotSS << std::hex << b.polyglotHash;
+
+        std::cerr << "Zobrist Hash : 0x" << zobristSS.str() << std::endl;
+        std::cerr << "Polyglot Hash : 0x" << polyglotSS.str() << std::endl;
 
         std::cerr << "Static Evaluation : " << eval::evaluateBoard(b) << std::endl;
     }

@@ -41,6 +41,7 @@ enum Square : uint8_t {
   N_SQUARES,
 };
 
+
 enum Color : int {
     WHITE = 0,
     BLACK = 1,

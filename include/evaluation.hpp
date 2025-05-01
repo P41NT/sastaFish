@@ -15,7 +15,7 @@ namespace eval {
 
     int staticExchange(Board &b, Square sq);
 
-    static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableWhite = {{
+    static constexpr std::array<std::array<int, 64>, 7> pieceSquareTableWhite = {{
         { 
                0,   0,   0,   0,   0,   0,   0,   0,
               50,  50,  50,  50,  50,  50,  50,  50,
@@ -75,10 +75,20 @@ namespace eval {
              -10, -20, -20, -20, -20, -20, -20, -10,
               20,  20,   0,   0,   0,   0,  20,  20,
               20,  30,  10,   0,   0,  10,  30,  20
+       },
+       {
+             -95,  -95,  -90,  -90,  -90,  -90,  -95,  -95,  
+             -95,  -50,  -50,  -50,  -50,  -50,  -50,  -95,  
+             -90,  -50,  -20,  -20,  -20,  -20,  -50,  -90,  
+             -90,  -50,  -20,    0,    0,  -20,  -50,  -90,  
+             -90,  -50,  -20,    0,    0,  -20,  -50,  -90,  
+             -90,  -50,  -20,  -20,  -20,  -20,  -50,  -90,  
+             -95,  -50,  -50,  -50,  -50,  -50,  -50,  -95,  
+             -95,  -95,  -90,  -90,  -90,  -90,  -95,  -95,
        }
     }};
 
-    static constexpr std::array<std::array<int, 64>, 6> pieceSquareTableBlack = {{
+    static constexpr std::array<std::array<int, 64>, 7> pieceSquareTableBlack = {{
         {
              0,   0,   0,   0,   0,   0,   0,   0,
              5,  10,  10, -20, -20,  10,  10,   5,

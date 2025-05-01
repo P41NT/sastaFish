@@ -32,6 +32,8 @@ namespace moveGen {
     int countSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
     bb getAttackerbb(const std::array<std::array<bb, 7>, 2> &boards, Square sq, Color col);
 
+    bool isEnPassantAttacked(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col);
+
     std::vector<Move> genPsuedoLegalMoves(Board &board);
     std::vector<Move> genLegalMoves(Board &board);
 }

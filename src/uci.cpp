@@ -1,6 +1,7 @@
 #include "../include/uci.hpp"
 #include "../include/search.hpp"
 #include "../include/colors.hpp"
+#include "../include/openingbook.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -9,7 +10,7 @@
 namespace uci {
     std::stack<uint64_t> initialStack;
 
-    void uciLoop(Board &b, TTable &tt, RepetitionTable &rt) {
+    void uciLoop(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk) {
         const TermColor::Modifier bannerColor(TermColor::FG_GREEN);
         const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
         const TermColor::Modifier errorColor(TermColor::FG_RED);
@@ -25,7 +26,7 @@ namespace uci {
             else if (command == "quit" || command == "stop") break;
             else if (command == "isready") inputIsReady(rt);
             else if (command.rfind("position", 0) == 0) inputPosition(b, command, rt);
-            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt);
+            else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt, bk);
             else if (command == "debug") debug(b);
             else {
                 std::cerr << errorColor << "> Unknown command: " << command << defaultColor << std::endl;
@@ -75,23 +76,20 @@ namespace uci {
             std::string move;
             while (iss >> move) {
                 b.makeMove(parseMove(b, move));
-                std::cerr << b.zobristHash << std::endl;
                 rt.increment(b.zobristHash);
                 initialStack.push(b.zobristHash);
             }
         }
     }
 
-    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt) {
+    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk) {
         int nodes = 0;
         int score = 0;
         int depth = 0;
-        static const int maxDepth = 10;
+        static const int maxDepth = 6;
         static const int maxTime = 1000;
 
-        debug::printBoard(b);
-
-        Move bestMove = search::iterativeDeepening(b, tt, rt, maxDepth, maxTime, nodes, depth, score);
+        Move bestMove = search::bestMove(b, tt, rt, bk, maxDepth, maxTime, nodes, depth, score);
         std::cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << std::endl;
         std::cout << "bestmove " << bestMove.getUciString() << std::endl;
 
@@ -129,18 +127,36 @@ namespace uci {
             }
         }
 
+
+        if (fromSquare == E1 && toSquare == G1 && b.board[fromSquare] == Piece{KING, WHITE}) 
+            return (Move(E1, G1, MoveFlag::CASTLE_KINGSIDE));
+        if (fromSquare == E1 && toSquare == C1 && b.board[fromSquare] == Piece{KING, WHITE}) 
+            return (Move(E1, C1, MoveFlag::CASTLE_QUEENSIDE));
+        if (fromSquare == E8 && toSquare == G8 && b.board[fromSquare] == Piece{KING, BLACK}) 
+            return (Move(E8, G8, MoveFlag::CASTLE_KINGSIDE));
+        if (fromSquare == E8 && toSquare == C8 && b.board[fromSquare] == Piece{KING, BLACK}) 
+            return (Move(E8, C8, MoveFlag::CASTLE_QUEENSIDE));
+
+        if (fromSquare == E1 && toSquare == H1 && b.board[fromSquare] == Piece{KING, WHITE}) 
+            return (Move(E1, G1, MoveFlag::CASTLE_KINGSIDE));
+        if (fromSquare == E1 && toSquare == A1 && b.board[fromSquare] == Piece{KING, WHITE})
+            return (Move(E1, C1, MoveFlag::CASTLE_QUEENSIDE));
+        if (fromSquare == E8 && toSquare == H8 && b.board[fromSquare] == Piece{KING, BLACK}) 
+            return (Move(E8, G8, MoveFlag::CASTLE_KINGSIDE));
+        if (fromSquare == E8 && toSquare == A8 && b.board[fromSquare] == Piece{KING, BLACK}) 
+            return (Move(E8, C8, MoveFlag::CASTLE_QUEENSIDE));
+
+
         if (b.board[toSquare].pieceType != N_PIECES) {
             return (Move(fromSquare, toSquare, MoveFlag::CAPTURE));
         }
 
-        if (fromSquare == E1 && toSquare == G1 && b.board[fromSquare] == Piece{KING, WHITE}) 
-            return (Move(fromSquare, toSquare, MoveFlag::CASTLE_KINGSIDE));
-        if (fromSquare == E1 && toSquare == C1 && b.board[fromSquare] == Piece{KING, WHITE}) 
-            return (Move(fromSquare, toSquare, MoveFlag::CASTLE_QUEENSIDE));
-        if (fromSquare == E8 && toSquare == G8 && b.board[fromSquare] == Piece{KING, BLACK}) 
-            return (Move(fromSquare, toSquare, MoveFlag::CASTLE_KINGSIDE));
-        if (fromSquare == E8 && toSquare == C8 && b.board[fromSquare] == Piece{KING, BLACK}) 
-            return (Move(fromSquare, toSquare, MoveFlag::CASTLE_QUEENSIDE));
+        if (b.board[fromSquare].pieceType == PAWN) {
+            if (b.currState.currentPlayer == WHITE && toSquare == fromSquare - 16) 
+                return (Move(fromSquare, toSquare, DOUBLE_PUSH));
+            if (b.currState.currentPlayer == BLACK && toSquare == fromSquare + 16) 
+                return (Move(fromSquare, toSquare, DOUBLE_PUSH));
+        }
 
         if (toSquare == b.currState.enPassantSquare && b.board[fromSquare].pieceType == PAWN) 
             return (Move(fromSquare, toSquare, EN_PASSANT));

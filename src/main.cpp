@@ -4,6 +4,7 @@
 #include "../include/zobrist.hpp"
 #include "../include/ttable.hpp"
 #include "../include/colors.hpp"
+#include "../include/openingbook.hpp"
 
 #include <iostream>
 
@@ -31,16 +32,18 @@ void printBanner() {
 }
 
 int main() {
-
     printBanner();
 
     moveGen::init();
     zobrist::init();
+
     Board *b = new Board();
+
     TTable *tt = new TTable();
     RepetitionTable *rt = new RepetitionTable();
+    openingbook::Book *bk = new openingbook::Book("../data/Human.bin");
 
-    uci::uciLoop(*b, *tt, *rt);
+    uci::uciLoop(*b, *tt, *rt, *bk);
 
     return 0;
 }

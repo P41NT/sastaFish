@@ -2,6 +2,7 @@
 #include "../include/movegen.hpp"
 #include "../include/zobrist.hpp"
 #include "../include/debug.hpp"
+#include "../include/openingbook.hpp"
 
 #include <iostream>
 #include <cctype>
@@ -54,6 +55,7 @@ Board::Board(std::string FEN) {
         rank++;
     }
 
+
     std::string activeColor, castlingRights, enPassantSquareFEN;
     split1 >> activeColor >> castlingRights >> enPassantSquareFEN;
 
@@ -84,6 +86,7 @@ Board::Board(std::string FEN) {
             bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
 
     this->zobristHash = zobrist::hashBoard(*this);
+    this->polyglotHash = openingbook::hashBoard(*this);
 }
 
 void Board::makeMove(Move mv) {
@@ -98,6 +101,8 @@ void Board::makeMove(Move mv) {
     zobristHash ^= zobrist::hashTable[mv.from()][fromPiece.pieceType][fromPiece.color];
     zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
 
+    polyglotHash ^= openingbook::getPieceHash(fromPiece, mv.from());
+    polyglotHash ^= openingbook::getPieceHash(fromPiece, mv.to());
 
     Square captureSquare = mv.to();
 
@@ -116,6 +121,7 @@ void Board::makeMove(Move mv) {
         bitboard::toggleBit(bitboards[capturePiece.color][6], captureSquare);
 
         zobristHash ^= zobrist::hashTable[captureSquare][capturePiece.pieceType][capturePiece.color];
+        polyglotHash ^= openingbook::getPieceHash(capturePiece, captureSquare);
 
         if (mv.isEnPassant()) board[captureSquare] = Piece{N_PIECES, N_COLORS};
         this->captured.push(capturePiece);
@@ -127,6 +133,9 @@ void Board::makeMove(Move mv) {
 
         zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
         zobristHash ^= zobrist::hashTable[mv.to()][toPromote.pieceType][toPromote.color];
+
+        polyglotHash ^= openingbook::getPieceHash(fromPiece, mv.to());
+        polyglotHash ^= openingbook::getPieceHash(toPromote, mv.to());
 
         board[mv.to()] = toPromote;
     }
@@ -146,6 +155,9 @@ void Board::makeMove(Move mv) {
                 zobristHash ^= zobrist::hashTable[rookFromSquareK][ROOK][fromPiece.color];
                 zobristHash ^= zobrist::hashTable[rookToSquareK][ROOK][fromPiece.color];
 
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookFromSquareK);
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookToSquareK);
+
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
 
@@ -160,6 +172,9 @@ void Board::makeMove(Move mv) {
                 zobristHash ^= zobrist::hashTable[rookFromSquareQ][ROOK][fromPiece.color];
                 zobristHash ^= zobrist::hashTable[rookToSquareQ][ROOK][fromPiece.color];
 
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookFromSquareQ);
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookToSquareQ);
+
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
 
@@ -171,6 +186,7 @@ void Board::makeMove(Move mv) {
 
     gameStates.push(currState);
     zobristHash ^= zobrist::hashCastle[currState.castlingState];
+    polyglotHash ^= openingbook::getCastleHash(currState.castlingState);
 
     switch (fromPiece.pieceType) {
         case KING:
@@ -206,20 +222,32 @@ void Board::makeMove(Move mv) {
         }
     }
     zobristHash ^= zobrist::hashCastle[currState.castlingState];
-
-    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
-    currState.currentPlayer = static_cast<Color>(static_cast<int>(currState.currentPlayer) ^ 1);
-    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
+    polyglotHash ^= openingbook::getCastleHash(currState.castlingState);
 
     if (currState.enPassantSquare != N_SQUARES) {
         zobristHash ^= zobrist::hashEnPassant[currState.enPassantSquare];
+        if (currState.polyglotEnPassant)
+            polyglotHash ^= openingbook::getEnPassantHash(currState.enPassantSquare);
     }
+
+    Color opps = static_cast<Color>(static_cast<int>(currState.currentPlayer) ^ 1);
 
     if (mv.isDoublePush()) {
         currState.enPassantSquare = static_cast<Square>(static_cast<int>((mv.from() + mv.to()) >> 1));
         zobristHash ^= zobrist::hashEnPassant[currState.enPassantSquare];
+
+        if (moveGen::isEnPassantAttacked(bitboards, currState.enPassantSquare, opps)) {
+            currState.polyglotEnPassant = true;
+            polyglotHash ^= openingbook::getEnPassantHash(currState.enPassantSquare);
+        }
     }
     else currState.enPassantSquare = N_SQUARES;
+
+    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
+    polyglotHash ^= openingbook::getTurnHash(currState.currentPlayer);
+    currState.currentPlayer = opps;
+    zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
+    polyglotHash ^= openingbook::getTurnHash(currState.currentPlayer);
 
     const Square oppKingSquare = bitboard::getLsb(bitboards[currState.currentPlayer][KING]);
     currState.isInCheck = moveGen::isSquareAttacked(bitboards, oppKingSquare, fromPiece.color);
@@ -238,20 +266,30 @@ void Board::unMakeMove(Move mv) {
     zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
     zobristHash ^= zobrist::hashCastle[currState.castlingState];
 
+    polyglotHash ^= openingbook::getTurnHash(currState.currentPlayer);
+    polyglotHash ^= openingbook::getCastleHash(currState.castlingState);
+
+    if (mv.isDoublePush()) {
+        Square enPassantSquare = currState.enPassantSquare;
+        zobristHash ^= zobrist::hashEnPassant[enPassantSquare];
+        if (currState.polyglotEnPassant)
+            polyglotHash ^= openingbook::getEnPassantHash(enPassantSquare);
+    }
+
     currState = gameStates.top();
     gameStates.pop();
 
     zobristHash ^= zobrist::hashCastle[currState.castlingState];
     zobristHash ^= zobrist::hashSideToMove[currState.currentPlayer];
 
+    polyglotHash ^= openingbook::getTurnHash(currState.currentPlayer);
+    polyglotHash ^= openingbook::getCastleHash(currState.castlingState);
+
     if (currState.enPassantSquare != N_SQUARES) {
         zobristHash ^= zobrist::hashEnPassant[currState.enPassantSquare];
+        polyglotHash ^= openingbook::getEnPassantHash(currState.enPassantSquare);
     }
 
-    if (mv.isDoublePush()) {
-        Square enPassantSquare = static_cast<Square>(static_cast<int>((mv.from() + mv.to()) >> 1));
-        zobristHash ^= zobrist::hashEnPassant[enPassantSquare];
-    }
 
     const Piece fromPiece = board[mv.to()];
     
@@ -265,6 +303,8 @@ void Board::unMakeMove(Move mv) {
     zobristHash ^= zobrist::hashTable[mv.from()][fromPiece.pieceType][fromPiece.color];
     zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
 
+    polyglotHash ^= openingbook::getPieceHash(fromPiece, mv.from());
+    polyglotHash ^= openingbook::getPieceHash(fromPiece, mv.to());
 
     board[mv.from()] = fromPiece;
     board[mv.to()] = {N_PIECES, N_COLORS};
@@ -279,6 +319,7 @@ void Board::unMakeMove(Move mv) {
         bitboard::toggleBit(bitboards[capturePiece.color][capturePiece.pieceType], captureSquare);
         bitboard::toggleBit(bitboards[capturePiece.color][6], captureSquare);
         zobristHash ^= zobrist::hashTable[captureSquare][capturePiece.pieceType][capturePiece.color];
+        polyglotHash ^= openingbook::getPieceHash(capturePiece, captureSquare);
         board[captureSquare] = capturePiece;
     }
     if (mv.isPromotion()) {
@@ -288,6 +329,9 @@ void Board::unMakeMove(Move mv) {
 
         zobristHash ^= zobrist::hashTable[mv.to()][fromPiece.pieceType][fromPiece.color];
         zobristHash ^= zobrist::hashTable[mv.to()][toPromote.pieceType][toPromote.color];
+
+        polyglotHash ^= openingbook::getPieceHash(fromPiece, mv.to());
+        polyglotHash ^= openingbook::getPieceHash(toPromote, mv.to());
 
         board[mv.from()] = {PAWN, fromPiece.color};
     }
@@ -307,6 +351,9 @@ void Board::unMakeMove(Move mv) {
                 zobristHash ^= zobrist::hashTable[rookFromSquareK][ROOK][fromPiece.color];
                 zobristHash ^= zobrist::hashTable[rookToSquareK][ROOK][fromPiece.color];
 
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookFromSquareK);
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookToSquareK);
+
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
 
@@ -320,6 +367,9 @@ void Board::unMakeMove(Move mv) {
 
                 zobristHash ^= zobrist::hashTable[rookFromSquareQ][ROOK][fromPiece.color];
                 zobristHash ^= zobrist::hashTable[rookToSquareQ][ROOK][fromPiece.color];
+
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookFromSquareQ);
+                polyglotHash ^= openingbook::getPieceHash(fromPiece, rookToSquareQ);
 
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
@@ -415,6 +465,7 @@ void Board::setFEN(std::string &FEN) {
             bitboard::getLsb(bitboards[currState.currentPlayer][KING]), opps);
 
     this->zobristHash = zobrist::hashBoard(*this);
+    this->polyglotHash = openingbook::hashBoard(*this);
 }
 
 Board::Board() : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}

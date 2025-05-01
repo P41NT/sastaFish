@@ -25,7 +25,7 @@ namespace zobrist {
 
     uint64_t hashBoard(const Board &b) {
         uint64_t hash = 0;
-        for (int i = 0; i < 64; ++i) {
+        for (int i = 0; i < 64; i++) {
             if (b.board[i].pieceType != PieceType::N_PIECES) {
                 int p = static_cast<int>(b.board[i].pieceType);
                 int c = static_cast<int>(b.board[i].color);

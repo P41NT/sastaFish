@@ -143,6 +143,20 @@ namespace moveGen{
         return top | bottom | left | right;
     }
 
+    bool isEnPassantAttacked(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col) {
+        bb squareBB = bitboard::setbitr(0ull, sq);
+        bb occupied = boards[0][6] | boards[1][6];
+
+        occupied &= (~squareBB);
+
+        if (col == BLACK && whitePawnAttacks(squareBB, boards[BLACK][PAWN])) 
+            return true;
+        else if (col == WHITE && blackPawnAttacks(squareBB, boards[WHITE][PAWN])) 
+            return true;
+
+        return false;
+    }
+
     Square getAttackingSquare(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col) {
         bb squareBB = bitboard::setbitr(0ull, sq);
         bb occupied = boards[0][6] | boards[1][6];

@@ -22,6 +22,7 @@ struct GameState {
     Square enPassantSquare;
     Color currentPlayer;
     bool isInCheck;
+    bool polyglotEnPassant;
 };
 
 class Board {
@@ -31,6 +32,7 @@ public:
     std::stack<GameState> gameStates;
 
     uint64_t zobristHash;
+    uint64_t polyglotHash;
 
     GameState currState;
 
