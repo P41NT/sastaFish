@@ -10,7 +10,8 @@ namespace zobrist {
     uint64_t hashSideToMove[2];
 
     void init() {
-        std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+        // std::mt19937_64 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+        std::mt19937_64 rng(0);
         for (int boardIndex = 0; boardIndex < 64; boardIndex++) {
             hashEnPassant[boardIndex] = rng();
             for (int pieceIndex = 0; pieceIndex < 6; pieceIndex++) {
@@ -34,6 +35,7 @@ namespace zobrist {
         }
         hash ^= hashCastle[b.currState.castlingState];
         hash ^= hashEnPassant[b.currState.enPassantSquare];
+        hash ^= hashSideToMove[b.currState.currentPlayer];
         return hash;
     }
 }

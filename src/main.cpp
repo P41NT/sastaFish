@@ -23,7 +23,7 @@ void printBanner() {
     )";
 
     std::string author = "Author:\t\tShawn Theo Moses ";
-    std::string version = "Version:\t0.2.0";
+    std::string version = "Version:\t0.3.0";
 
     std::cout << bannerColor << banner << std::endl;
     std::cout << authorColor << author << std::endl;
@@ -34,6 +34,8 @@ void printBanner() {
 int main() {
     printBanner();
 
+    // freopen("log.txt", "w", stderr);
+
     moveGen::init();
     zobrist::init();
 
@@ -41,7 +43,7 @@ int main() {
 
     TTable *tt = new TTable();
     RepetitionTable *rt = new RepetitionTable();
-    openingbook::Book *bk = new openingbook::Book("../data/gm2001.bin");
+    openingbook::Book *bk = new openingbook::Book("/home/shobwq/Projects/sastaFish/data/Human.bin");
 
     uci::uciLoop(*b, *tt, *rt, *bk);
 

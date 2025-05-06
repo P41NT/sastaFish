@@ -76,8 +76,6 @@ namespace uci {
                 FEN += FENWord + " ";
             }
             b.setFEN(FEN);
-            rt.increment(b.zobristHash);
-            initialStack.push(b.zobristHash);
         }
 
         if (iss >> option && option == "moves") {
@@ -128,8 +126,6 @@ namespace uci {
                 maxTime /= 40;
             }
         }
-
-        std::cout << maxTime << std::endl;
 
         Move bestMove = search::bestMove(b, tt, rt, bk, maxDepth, maxTime, nodes, depth, score);
         std::cout << "info score cp " << score << " depth " << depth << " nodes " << nodes << std::endl;

@@ -2,26 +2,27 @@
 #include "../include/movegen.hpp"
 #include "../include/bitboard.hpp"
 #include <queue>
+#include <iostream>
 
 namespace eval {
     int evaluateBoard(Board &b) {
         int mat = materialScore(b) * materialWeight;
-        auto mobs = mobility(b);
-        int mob = mobilityWeight * (mobs.first - mobs.second);
+        // auto mobs = mobility(b);
+        // int mob = mobilityWeight * (mobs.first - mobs.second);
 
-        if (b.currState.currentPlayer == WHITE) {
-            if (mobs.first == 0 && b.currState.isInCheck) return -inf;
-            else if (mobs.first == 0) return 0;
-        }
+        // if (b.currState.currentPlayer == WHITE) {
+        //     if (mobs.first == 0 && b.currState.isInCheck) return -inf;
+        //     else if (mobs.first == 0) return 0;
+        // }
+        //
+        // if (b.currState.currentPlayer == BLACK) {
+        //     if (mobs.second == 0 && b.currState.isInCheck) {
+        //         return -inf;
+        //     }
+        //     else if (mobs.second == 0) return 0;
+        // }
 
-        if (b.currState.currentPlayer == BLACK) {
-            if (mobs.second == 0 && b.currState.isInCheck) {
-                return -inf;
-            }
-            else if (mobs.second == 0) return 0;
-        }
-
-        return (b.currState.currentPlayer == WHITE ? 1 : -1) * (mat + mob);
+        return (b.currState.currentPlayer == WHITE ? 1 : -1) * (mat);
     }
 
     int materialScore(Board &b) {
@@ -103,6 +104,11 @@ namespace eval {
 
         for (int i = depth - 1; i >= 0; i--) 
             gain[i] = std::max(-gain[i + 1], gain[i]);
+
+        for (int i = 0; i < depth; i++) {
+            std::cerr << gain[i] << " ";
+        }
+        std::cerr << std::endl;
 
         return gain[0];
     }

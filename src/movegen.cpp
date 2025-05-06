@@ -1,4 +1,6 @@
 #include "../include/movegen.hpp"
+#include <iostream>
+#include "../include/debug.hpp"
 
 namespace moveGen{
     bb knightAttackTable[64];
@@ -122,8 +124,7 @@ namespace moveGen{
     }
 
     bb genRookMask(bb occupied, Square sq) {
-        bb s = 0ull;
-        s = bitboard::setbitr(s, sq);
+        bb s = bitboard::setbitr(0ull, sq);
         int row = sq / 8; int col = sq % 8;
 
         bb occupiedFlip = bitboard::flipHorizontal(occupied);
@@ -158,6 +159,13 @@ namespace moveGen{
     }
 
     Square getAttackingSquare(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col) {
+
+        if (boards[col][KING] & kingAttackTable[sq])
+            return bitboard::getLsb(boards[col][KING] & kingAttackTable[sq]);
+        if (boards[col][KNIGHT] & knightAttackTable[sq]) 
+            return bitboard::getLsb(boards[col][KNIGHT] & knightAttackTable[sq]);
+
+
         bb squareBB = bitboard::setbitr(0ull, sq);
         bb occupied = boards[0][6] | boards[1][6];
 
@@ -168,17 +176,15 @@ namespace moveGen{
         else if (col == WHITE && blackPawnAttacks(squareBB, boards[WHITE][PAWN])) 
             return bitboard::getLsb(blackPawnAttacks(squareBB, boards[WHITE][PAWN]));
 
-        bb bishopMask = genBishopMask(occupied, sq);
-        bb rookMask = genRookMask(occupied, sq);
 
-        if (boards[col][KING] & kingAttackTable[sq])
-            return bitboard::getLsb(boards[col][KING] & kingAttackTable[sq]);
-        if (boards[col][KNIGHT] & knightAttackTable[sq]) 
-            return bitboard::getLsb(boards[col][KNIGHT] & knightAttackTable[sq]);
+        bb bishopMask = genBishopMask(occupied, sq);
         if (boards[col][BISHOP] & bishopMask) 
             return bitboard::getLsb(boards[col][BISHOP] & bishopMask);
+
+        bb rookMask = genRookMask(occupied, sq);
         if (boards[col][ROOK] & rookMask) 
             return bitboard::getLsb(boards[col][ROOK] & rookMask);
+
         if (boards[col][QUEEN] & (rookMask | bishopMask)) 
             return bitboard::getLsb(boards[col][QUEEN] & (rookMask | bishopMask));
 
@@ -187,19 +193,21 @@ namespace moveGen{
 
     bool isSquareAttacked(const std::array<std::array<bb, 7>, 2> &boards, const Square sq, const Color col) {
         bb squareBB = bitboard::setbitr(0ull, sq);
-        bb occupied = boards[0][6] | boards[1][6];
 
+        if (boards[col][KING] & kingAttackTable[sq]) return true;
+        if (boards[col][KNIGHT] & knightAttackTable[sq]) return true;
+
+        bb occupied = boards[0][6] | boards[1][6];
         occupied &= (~squareBB);
 
         if (col == BLACK && whitePawnAttacks(squareBB, boards[BLACK][PAWN])) return true;
         else if (col == WHITE && blackPawnAttacks(squareBB, boards[WHITE][PAWN])) return true;
 
-        bb bishopMask = genBishopMask(occupied, sq);
-        bb rookMask = genRookMask(occupied, sq);
 
-        if (boards[col][KING] & kingAttackTable[sq]) return true;
-        if (boards[col][KNIGHT] & knightAttackTable[sq]) return true;
+        bb bishopMask = genBishopMask(occupied, sq);
         if (boards[col][BISHOP] & bishopMask) return true;
+
+        bb rookMask = genRookMask(occupied, sq);
         if (boards[col][ROOK] & rookMask) return true;
         if (boards[col][QUEEN] & (rookMask | bishopMask)) return true;
 
@@ -482,21 +490,23 @@ namespace moveGen{
             bb pawnPush, pawnAttack;
             bb promotionRange = 0ull;
 
+            bb enPassantTemp = 0ull;
+            if (board.currState.enPassantSquare != N_SQUARES) {
+                enPassantTemp = bitboard::setbitr(0ull, board.currState.enPassantSquare);
+            }
             bb enPassant;
 
             switch (side) {
                 case WHITE: 
                     pawnPush = whitePawnPush(pawnMask, occupied); 
                     pawnAttack = whitePawnAttacks(pawnMask, notfriendly);
-                    enPassant = whitePawnAttacks(pawnMask, 
-                            bitboard::setbitr(0ull, board.currState.enPassantSquare));
+                    enPassant = whitePawnAttacks(pawnMask, enPassantTemp); 
                     promotionRange = horizontalMask[RANK8];
                     break;
                 case BLACK: 
                     pawnPush = blackPawnPush(pawnMask, occupied);
                     pawnAttack = blackPawnAttacks(pawnMask, notfriendly);
-                    enPassant = blackPawnAttacks(pawnMask, 
-                            bitboard::setbitr(0ull, board.currState.enPassantSquare));
+                    enPassant = blackPawnAttacks(pawnMask, enPassantTemp);
                     promotionRange = horizontalMask[RANK1];
                     break;
                 default: break;

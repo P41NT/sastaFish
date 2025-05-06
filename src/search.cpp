@@ -3,8 +3,8 @@
 #include "../include/evaluation.hpp"
 #include "../include/movegen.hpp"
 #include "../include/ttable.hpp"
-#include "../include/debug.hpp"
 #include "../include/openingbook.hpp"
+#include "../include/debug.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -15,12 +15,59 @@
 #include <random>
 #include <iostream>
 
+int count = 0;
+
 namespace search {
+    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
+        int standingPat = eval::evaluateBoard(b);
+
+        if (depth == 0) return standingPat;
+
+        if (standingPat >= beta) return beta;
+        if (standingPat > alpha) alpha = standingPat;
+
+        int originalAlpha = alpha;
+
+        std::vector<Move> legalMoves = moveGen::genLegalMoves(b);
+        if (legalMoves.empty()) {
+            if (b.currState.isInCheck) return -inf;
+            else return 0;
+        }
+
+
+        auto legal = moveGen::genLegalMoves(b);
+        
+        bool searchCut = false;
+        for (auto mv : legal) {
+            if (mv.isCapture()) {
+
+                b.makeMove(mv);
+                int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
+                b.unMakeMove();
+
+                if (stopSearch) {
+                    searchCut = true;
+                    break;
+                }
+
+                if (score > alpha) alpha = score;
+                if (alpha >= beta) break;
+            }
+        }
+
+        if (searchCut) return originalAlpha;
+
+        return alpha;
+    }
+
     int alphaBetaSearch(Board &b, TTable &tt, RepetitionTable &rt, int alpha, int beta, int depth, 
             int &nodes, std::atomic<bool> &stopSearch) {
 
         nodes++;
-        if (rt.getEntry(b.zobristHash) >= 2) { return 0; }
+
+        if (rt.getEntry(b.zobristHash) >= 2) { 
+            return 0; 
+        }
 
         TTableEntry *entry = tt.getEntry(b.zobristHash);
         Move bestMove;
@@ -43,26 +90,40 @@ namespace search {
 
         std::vector<Move> legalMoves = moveGen::genLegalMoves(b);
         if (legalMoves.empty()) {
-            if (b.currState.isInCheck) return -inf + 1;
+            if (b.currState.isInCheck) return -inf;
             else return 0;
         }
 
-        if (depth == 0) return quiesce(b, alpha, beta, 0, stopSearch);
+        bool searchCut = false;
+
+        if (depth == 0) {
+            int result = quiesce(b, alpha, beta, 6, stopSearch);
+            if (stopSearch) 
+                return originalAlpha;
+            return result;
+        }
+
+        bool nextDebug = false;
 
         for (auto mv : legalMoves) {
-            if (stopSearch) break;
-
-            if (mv.isCapture()) {
-                int seeVal = eval::staticExchange(b, mv.to()) - 
-                    eval::pieceValues[b.board[mv.to()].pieceType];
-                if (seeVal < 0) continue;
-            }
+            // if (mv.isCapture()) {
+            //     int seeVal = eval::staticExchange(b, mv.to()) - 
+            //         eval::pieceValues[b.board[mv.to()].pieceType];
+            //     if (seeVal < 0) continue;
+            // }
+            
+            if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
             b.makeMove(mv);
             rt.increment(b.zobristHash);
             int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
             rt.decrement(b.zobristHash);
             b.unMakeMove();
+
+            if (stopSearch) {
+                searchCut = true;
+                break;
+            }
 
             if (score > alpha) {
                 alpha = score;
@@ -71,6 +132,10 @@ namespace search {
             if (alpha >= beta) {
                 break;
             }
+        }
+
+        if (searchCut) {
+            return originalAlpha;
         }
 
         TTableFlag flag = EXACT;
@@ -86,7 +151,7 @@ namespace search {
         
         std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
 
-        std::vector<openingbook::PolyglotEntry> entries = bk.getEntries(b.polyglotHash);
+        auto entries = bk.getEntries(b.polyglotHash);
         if (entries.size() != 0) {
             int nextMove = rng() % std::min(5, (int)entries.size());
             return openingbook::convertToMove(entries[nextMove], b);
@@ -102,7 +167,7 @@ namespace search {
         int bestValue = -inf;
 
         auto start = std::chrono::high_resolution_clock::now();
-        auto deadline = start + std::chrono::milliseconds(maxTime) - std::chrono::milliseconds(50);
+        auto deadline = start + std::chrono::milliseconds(maxTime);
 
         nodes = 0;
 
@@ -122,30 +187,13 @@ namespace search {
         for (depth = 1; depth <= maxDepth; depth++) {
             Move iterBestMove = bestMove;
 
-            int alpha = -inf;
-            int beta = inf;
-
-            if (iterBestMove.move != 0000) {
-                b.makeMove(iterBestMove);
-                rt.increment(b.zobristHash);
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-                rt.decrement(b.zobristHash);
-                b.unMakeMove();
-
-                alpha = eval;
-            }
+            int alpha = -inf - 1;
+            int beta = inf + 1;
 
             bool searchCut = false;
 
-            for (auto mv : legalmoves) {
-
-                if (mv.isCapture()) {
-                    int seeVal = eval::staticExchange(b, mv.to()) - 
-                        eval::pieceValues[b.board[mv.to()].pieceType];
-                    if (seeVal < 0) continue;
-                }
-
-                b.makeMove(mv);
+            if (iterBestMove.move != 0000) {
+                b.makeMove(iterBestMove);
                 rt.increment(b.zobristHash);
                 int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
                 rt.decrement(b.zobristHash);
@@ -156,7 +204,26 @@ namespace search {
                     break;
                 }
 
-                std::cerr << depth << " " << mv.getUciString() << " " << eval << std::endl;
+                alpha = eval;
+            }
+
+            for (auto mv : legalmoves) {
+
+                if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
+
+                b.makeMove(mv);
+                rt.increment(b.zobristHash);
+
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
+                rt.decrement(b.zobristHash);
+                b.unMakeMove();
+
+                if (stopSearch) {
+                    searchCut = true;
+                    break;
+                }
+
+                std::cerr << std::hex << b.zobristHash << " " << b.polyglotHash << " " << std::dec << mv.getUciString() << " " << eval << " " << depth << std::endl;
 
                 if (eval > alpha) {
                     alpha = eval;
@@ -169,44 +236,20 @@ namespace search {
                 bestMove = iterBestMove;
             }
             if (stopSearch) break;
-        }
 
-        std::cout << std::endl;
+            std::cerr << iterBestMove.getUciString() << " " << bestValue << std::endl;
+            std::cerr << std::endl;
+        }
 
         stopSearch = true;
         conditionVar.notify_one();
         searchThread.join();
         depth--;
 
+        debug::printBoard(b);
+
         score = bestValue;
         return bestMove;
     }
 
-    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
-        int standingPat = eval::evaluateBoard(b);
-
-        if (standingPat >= beta) return beta;
-        if (depth == 0) return standingPat;
-        if (standingPat > alpha) alpha = standingPat;
-
-        // for (auto mv : moveGen::genLegalMoves(b)) {
-        //
-        //     if (stopSearch) break;
-        //
-        //     if (mv.isCapture()) {
-        //         int seeVal = eval::staticExchange(b, mv.to()) - eval::pieceValues[b.board[mv.from()].pieceType];
-        //         if (seeVal < 0) continue;
-        //         b.makeMove(mv);
-        //         int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
-        //         b.unMakeMove();
-        //
-        //         if (score >= beta) {
-        //             return beta;
-        //         }
-        //         if (score > alpha) alpha = score;
-        //     }
-        // }
-
-        return alpha;
-    }
 }

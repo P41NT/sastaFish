@@ -71,7 +71,7 @@ namespace openingbook {
 
         bb epSquareBB = bitboard::setbitr(0ull, b.currState.enPassantSquare);
 
-        if (b.currState.enPassantSquare != N_SQUARES) {
+        if (b.currState.polyglotEnPassant) {
             bb pawnAttacks = b.currState.currentPlayer == WHITE ? 
                 moveGen::blackPawnAttacks(epSquareBB, b.bitboards[b.currState.currentPlayer][PAWN]) :
                 moveGen::whitePawnAttacks(epSquareBB, b.bitboards[b.currState.currentPlayer][PAWN]);
