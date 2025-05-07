@@ -5,6 +5,7 @@
 #include <iostream>
 #include <ios>
 #include <algorithm>
+#include <fstream>
 
 uint16_t read16BigEndian(const char* buffer) {
     return (static_cast<uint8_t>(buffer[0]) << 8) |
