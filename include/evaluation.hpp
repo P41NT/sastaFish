@@ -10,8 +10,8 @@ namespace eval {
     static constexpr std::array<std::array<int, 6>, 6> generate_mvv_lva_table() {
         std::array<std::array<int, 6>, 6> table{};
 
-        for (int victim = 0; victim < 6; victim++) {
-            for (int attacker = 0; attacker < 6; attacker++) {
+        for (size_t victim = 0; victim < 6; victim++) {
+            for (size_t attacker = 0; attacker < 6; attacker++) {
                 table[victim][attacker] = pieceValues[victim] * 10 - pieceValues[attacker];
             }
         }

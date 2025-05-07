@@ -20,7 +20,7 @@
  * 0011 -> castle queenside
  */
 
-enum MoveFlag : int {
+enum MoveFlag : uint8_t {
     EN_PASSANT = 0b1001,
     CAPTURE = 0b1000,
     PROMOTE = 0b0100,
@@ -43,9 +43,9 @@ public:
     uint16_t move;
     inline Move() : move(0) {}
 
-    inline Move(Square from, Square to) : move((uint8_t)from << 6 | (uint8_t)to) {}
+    inline Move(Square from, Square to) : move(static_cast<uint8_t>(from) << 6 | static_cast<uint8_t>(to)) {}
     inline Move(Square from, Square to, uint8_t flags) : 
-        move((flags << 12) | ((uint8_t)from << 6) | ((uint8_t)to)) { }
+        move((flags << 12) | (static_cast<uint8_t>(from) << 6) | (static_cast<uint8_t>(to))) { }
 
     inline bool isCapture() const { return (move >> 12 & 0b1000); }
     inline bool isPromotion() const { return (move >> 12 & 0b0100); }
@@ -68,8 +68,8 @@ public:
         }
     }
 
-    inline Square from() const { return (Square)((move >> 6) & 0b111111); }
-    inline Square to() const { return (Square)(move & 0b111111); }
+    inline Square from() const { return static_cast<Square>((move >> 6) & 0b111111); }
+    inline Square to() const { return static_cast<Square>(move & 0b111111); }
 
     bool operator==(Move &other) const { return this->move == other.move; }
     bool operator!=(Move &other) const { return this->move == other.move; }

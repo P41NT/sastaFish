@@ -9,42 +9,42 @@
 
 Board::Board(std::string FEN) {
     std::stringstream split1(FEN);
-    std::string board;
-    split1 >> board;
+    std::string boardFEN;
+    split1 >> boardFEN;
 
-    std::stringstream rowsplit(board);
+    std::stringstream rowsplit(boardFEN);
     std::string currRow;
-    int rank = 0;
+    size_t rank = 0;
 
-    for (int i = 0; i < 8; i++) 
-        for (int j = 0; j < 8; j++) 
+    for (size_t i = 0; i < 8; i++) 
+        for (size_t j = 0; j < 8; j++) 
             this->board[i * 8 + j] = Piece{N_PIECES, N_COLORS};
 
 
     while (!rowsplit.eof()) {
         std::getline(rowsplit, currRow, '/');
-        int l = currRow.length();
-        int file = 0;
+        size_t l = currRow.length();
+        size_t file = 0;
 
-        for (int i = 0; i < l; i++) {
-            Square square = (Square)(rank * 8 + file);
+        for (size_t i = 0; i < l; i++) {
+            Square square = static_cast<Square>(rank * 8 + file);
             if (std::isalpha(currRow[i])) {
-                int col = 0;
+                size_t col = 0;
 
                 if (std::islower(currRow[i])) {
                     col = 1;
                     currRow[i] -= 32;
                 }
 
-                int pie = pieceNumberMap.at(currRow[i]);
+                size_t pie = pieceNumberMap.at(currRow[i]);
                 bitboard::setbit(bitboards[col][pie], square);
                 bitboard::setbit(bitboards[col][6], square);
-                this->board[rank * 8 + file] = Piece{(PieceType)pie, (Color)col};
+                this->board[rank * 8 + file] = Piece{static_cast<PieceType>(pie), static_cast<Color>(col)};
 
                 file++;
             }
             else {
-                int dig = currRow[i] - '0';
+                size_t dig = static_cast<size_t>(currRow[i] - '0');
                 file += dig;
             }
         }
@@ -58,7 +58,7 @@ Board::Board(std::string FEN) {
     if (activeColor == "b") currState.currentPlayer = BLACK;
     else currState.currentPlayer = WHITE;
 
-    const std::map<int, int> maptocastle = {
+    const std::map<char, uint8_t> maptocastle = {
         { 'Q', CASTLE_QUEEN_WHITE },
         { 'K', CASTLE_KING_WHITE},
         { 'q', CASTLE_QUEEN_BLACK},
@@ -105,8 +105,8 @@ void Board::makeMove(Move mv) {
     Square captureSquare = mv.to();
 
     if (mv.isEnPassant()) {
-        if (currState.currentPlayer == WHITE) captureSquare = (Square)((int)captureSquare + 8);
-        else captureSquare = (Square)((int)captureSquare - 8);
+        if (currState.currentPlayer == WHITE) captureSquare = static_cast<Square>(captureSquare + 8);
+        else captureSquare = static_cast<Square>(captureSquare - 8);
     }
 
     const Piece capturePiece = board[captureSquare];
@@ -284,8 +284,8 @@ void Board::unMakeMove() {
     if (mv.isCapture()) {
         Square captureSquare = mv.isEnPassant() ? currState.enPassantSquare : mv.to();
         if (mv.isEnPassant()) {
-            if (currState.currentPlayer == WHITE) captureSquare = (Square)((int)captureSquare + 8);
-            else captureSquare = (Square)((int)captureSquare - 8);
+            if (currState.currentPlayer == WHITE) captureSquare = static_cast<Square>(captureSquare + 8);
+            else captureSquare = static_cast<Square>(captureSquare - 8);
         }
         const Piece capturePiece = captured.top(); captured.pop();
 
@@ -350,51 +350,51 @@ void Board::unMakeMove() {
 
 void Board::setFEN(std::string &FEN) {
     std::stringstream split1(FEN);
-    std::string board;
-    split1 >> board;
+    std::string boardFEN;
+    split1 >> boardFEN;
 
     while (moves.size()) moves.pop();
     while (captured.size()) captured.pop();
     while (gameStates.size()) gameStates.pop();
 
-    std::stringstream rowsplit(board);
+    std::stringstream rowsplit(boardFEN);
     std::string currRow;
-    int rank = 0;
+    size_t rank = 0;
 
-    for (int i = 0; i < 8; i++) 
-        for (int j = 0; j < 8; j++) 
+    for (size_t i = 0; i < 8; i++) 
+        for (size_t j = 0; j < 8; j++) 
             this->board[i * 8 + j] = Piece{N_PIECES, N_COLORS};
 
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 7; j++) {
+    for (size_t i = 0; i < 2; i++) {
+        for (size_t j = 0; j < 7; j++) {
             bitboards[i][j] = 0ull;
         }
     }
 
     while (!rowsplit.eof()) {
         std::getline(rowsplit, currRow, '/');
-        int l = currRow.length();
-        int file = 0;
+        size_t l = currRow.length();
+        size_t file = 0;
 
-        for (int i = 0; i < l; i++) {
-            Square square = (Square)(rank * 8 + file);
+        for (size_t i = 0; i < l; i++) {
+            Square square = static_cast<Square>(rank * 8 + file);
             if (std::isalpha(currRow[i])) {
-                int col = 0;
+                size_t col = 0;
 
                 if (std::islower(currRow[i])) {
                     col = 1;
                     currRow[i] -= 32;
                 }
 
-                int pie = pieceNumberMap.at(currRow[i]);
+                size_t pie = pieceNumberMap.at(currRow[i]);
                 bitboard::setbit(bitboards[col][pie], square);
                 bitboard::setbit(bitboards[col][6], square);
-                this->board[rank * 8 + file] = Piece{(PieceType)pie, (Color)col};
+                this->board[rank * 8u + file] = Piece{static_cast<PieceType>(pie), static_cast<Color>(col)};
 
                 file++;
             }
             else {
-                int dig = currRow[i] - '0';
+                size_t dig = static_cast<size_t>(currRow[i] - '0');
                 file += dig;
             }
         }
@@ -408,7 +408,7 @@ void Board::setFEN(std::string &FEN) {
     if (activeColor == "b") currState.currentPlayer = BLACK;
     else currState.currentPlayer = WHITE;
 
-    const std::map<int, int> maptocastle = {
+    const std::map<char, uint8_t> maptocastle = {
         { 'Q', CASTLE_QUEEN_WHITE },
         { 'K', CASTLE_KING_WHITE},
         { 'q', CASTLE_QUEEN_BLACK},

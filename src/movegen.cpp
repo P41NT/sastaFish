@@ -32,7 +32,7 @@ namespace moveGen{
     void preprocessknightMoves() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                bb currbb = bitboard::setbitr(0ull, (Square)(i * 8 + j));
+                bb currbb = bitboard::setbitr(0ull, static_cast<Square>(i * 8 + j));
                 bb attackbb = 
                     bitboard::shiftNorth(bitboard::shiftEast(bitboard::shiftEast(currbb))) |
                     bitboard::shiftNorth(bitboard::shiftNorth(bitboard::shiftEast(currbb))) |
@@ -51,7 +51,7 @@ namespace moveGen{
     void preprocesskingMoves() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                bb currbb = bitboard::setbitr(0ull, (Square)(i * 8 + j));
+                bb currbb = bitboard::setbitr(0ull, static_cast<Square>(i * 8 + j));
                 bb attackbb = 
                     bitboard::shiftNorth(currbb) |
                     bitboard::shiftWest(currbb)  |
@@ -73,8 +73,8 @@ namespace moveGen{
                 // diagonalMask[i + j] = bitboard::setbit(diagonalMask[i + j], (Square)(i * 8 + j));
                 // antiDiagonalMask[7 + i - j] = 
                 //     bitboard::setbit(antiDiagonalMask[7 + i - j], (Square)(i * 8 + j));
-                bitboard::setbit(diagonalMask[i + j], (Square(i * 8 + j)));
-                bitboard::setbit(antiDiagonalMask[7 + i - j], (Square(i * 8 + j)));
+                bitboard::setbit(diagonalMask[i + j], static_cast<Square>(i * 8 + j));
+                bitboard::setbit(antiDiagonalMask[7 + i - j], static_cast<Square>(i * 8 + j));
             }
         }
     }
@@ -82,8 +82,8 @@ namespace moveGen{
     void preprocessrookMasks() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                bitboard::setbit(horizontalMask[i], (Square)(8 * i + j));
-                bitboard::setbit(verticalMask[j], (Square)(8 * i + j));
+                bitboard::setbit(horizontalMask[i], static_cast<Square>(8 * i + j));
+                bitboard::setbit(verticalMask[j], static_cast<Square>(8 * i + j));
             }
         }
     }
@@ -135,11 +135,9 @@ namespace moveGen{
         bb occupiedFlipV = bitboard::flipVertical(occupiedV);
 
         bb right = (occupied ^ (occupied - 2 * s)) & horizontalMask[row];
-        bb left = bitboard::flipHorizontal((occupiedFlip ^ (occupiedFlip - 2 * sFlip)) 
-                & horizontalMask[row]);
-        bb bottom = (occupiedV) ^ (occupiedV - 2 * s) & verticalMask[col];
-        bb top = bitboard::flipVertical(occupiedFlipV ^ (occupiedFlipV - 2 * sFlipV) 
-                & verticalMask[col]);
+        bb left = bitboard::flipHorizontal((occupiedFlip ^ (occupiedFlip - 2 * sFlip)) & horizontalMask[row]);
+        bb bottom = ((occupiedV) ^ (occupiedV - 2 * s)) & verticalMask[col];
+        bb top = bitboard::flipVertical((occupiedFlipV ^ (occupiedFlipV - 2 * sFlipV)) & verticalMask[col]);
         
         return top | bottom | left | right;
     }

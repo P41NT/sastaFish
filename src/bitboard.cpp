@@ -28,12 +28,12 @@ namespace bitboard {
 
     Square getLsb(const bb &in) {
         bb lsb_bb = in & (-in);
-        return (Square)bitScanLookup[lsb_bb % 67];
+        return static_cast<Square>(bitScanLookup[lsb_bb % 67]);
     }
 
     Square getLsbPop(bb &in) {
         bb lsb_bb = in & (-in);
-        Square answer = (Square)bitScanLookup[lsb_bb % 67];
+        Square answer = static_cast<Square>(bitScanLookup[lsb_bb % 67]);
         in ^= lsb_bb;
         return answer;
     }

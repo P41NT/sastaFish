@@ -12,9 +12,6 @@
 #include <thread>
 #include <chrono>
 #include <random>
-#include <iostream>
-
-int count = 0;
 
 namespace search {
     int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
@@ -155,11 +152,13 @@ namespace search {
     Move bestMove(Board &b, TTable &tt, RepetitionTable &rt, book::Book& bk, int maxDepth,
             int maxTime, int &nodes, int &depth, int &score) {
         
-        std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+        auto seed = static_cast<std::mt19937::result_type>(std::chrono::steady_clock::now().time_since_epoch().count());
+        std::mt19937 rng(seed);
 
         auto entries = bk.getEntries(b.polyglotHash);
         if (entries.size() != 0) {
-            int nextMove = rng() % std::min(5, (int)entries.size());
+            size_t limit = std::min<size_t>(entries.size(), 5);
+            size_t nextMove = rng() % limit;
             return book::convertToMove(entries[nextMove], b);
         }
         Move result = iterativeDeepening(b, tt, rt, maxDepth, maxTime, nodes, depth, score);

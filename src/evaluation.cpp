@@ -2,7 +2,6 @@
 #include "../include/movegen.hpp"
 #include "../include/bitboard.hpp"
 #include <queue>
-#include <iostream>
 
 namespace eval {
 
@@ -32,12 +31,12 @@ namespace eval {
 
         int score = 0;
         for (auto side : {WHITE,  BLACK}) {
-            for (int piece = 0; piece < 6; piece++) {
+            for (size_t piece = 0; piece < 6; piece++) {
                 bb temp = b.bitboards[side][piece];
                 while (temp) {
                     Square currSquare = bitboard::getLsbPop(temp);
                     int pieceVal = pieceValues[piece];
-                    int p = piece;
+                    size_t p = piece;
                     if (p == 5 && endgame) p = 6;
                     pieceVal += (side == WHITE) ? pieceSquareTableWhite[p][currSquare] :
                                                   pieceSquareTableBlack[p][currSquare];
@@ -52,10 +51,10 @@ namespace eval {
         Color prevCol = b.currState.currentPlayer;
         std::pair<int, int> mob;
         b.currState.currentPlayer = WHITE;
-        mob.first += moveGen::genLegalMoves(b).size();
+        mob.first = static_cast<int>(moveGen::genLegalMoves(b).size());
 
         b.currState.currentPlayer = BLACK;
-        mob.second += moveGen::genLegalMoves(b).size();
+        mob.second = static_cast<int>(moveGen::genLegalMoves(b).size());
         b.currState.currentPlayer = prevCol;
 
         return mob;
@@ -82,7 +81,7 @@ namespace eval {
         }
 
         std::array<int, 32> gain;
-        int depth = 0;
+        size_t depth = 0;
 
         gain[0] = pieceValues[b.board[sq].pieceType];
 
@@ -97,7 +96,7 @@ namespace eval {
             toMove = static_cast<Color>(static_cast<int>(toMove ^ 1));
         }
 
-        for (int i = depth - 1; i >= 0; i--) 
+        for (size_t i = depth - 1; i-- > 0; ) 
             gain[i] = std::max(-gain[i + 1], gain[i]);
 
         return gain[0];

@@ -33,9 +33,9 @@ namespace zobrist {
 
     uint64_t hashBoard(const Board &b) {
         uint64_t hash = 0;
-        for (int i = 0; i < 64; i++) {
+        for (size_t i = 0; i < 64; i++) {
             if (b.board[i].pieceType != PieceType::N_PIECES) {
-                hash ^= getPieceHash(b.board[i], (Square)i);
+                hash ^= getPieceHash(b.board[i], static_cast<Square>(i));
             }
         }
         hash ^= getCastleHash(b.currState.castlingState);

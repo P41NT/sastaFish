@@ -28,7 +28,7 @@ namespace bitboard {
     inline bb shiftNorthWest(const bb in) { return (in << 9) & 0xFEFEFEFEFEFEFEFE; }
     inline bb shiftNorthEast(const bb in) { return (in << 7) & 0x7F7F7F7F7F7F7F7F; }
 
-    inline bool getBit(const bb in, const Square sq) { return (bool)((in >> sq) & 1ull); }
+    inline bool getBit(const bb in, const Square sq) { return static_cast<bool>((in >> sq) & 1ull); }
 
     inline bb setbitr(const bb in, const Square sq) { return (in | (1ull << sq)); }
     inline bb toggleBitr(const bb in, const Square sq) { return (in ^ (1ull << sq)); }

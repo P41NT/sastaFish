@@ -33,7 +33,7 @@ namespace book {
         std::streamsize bookSize = bookFile.tellg();
         bookFile.seekg(0, std::ios::beg);
 
-        unsigned numEntries = bookSize / sizeof(PolyglotEntry);
+        size_t numEntries = static_cast<size_t>(bookSize) / sizeof(PolyglotEntry);
         this->entries = std::vector<PolyglotEntry>(numEntries);
 
         char buffer[16];
@@ -71,8 +71,8 @@ namespace book {
         int fromRow = 7 - ((entry.move >> 9) & (0b111));
         int promotionPiece = (entry.move >> 12) & (0b111);
         
-        Square fromSquare = (Square)((fromRow * 8) + fromFile);
-        Square toSquare = (Square)((toRow * 8) + toFile);
+        Square fromSquare = static_cast<Square>((fromRow * 8) + fromFile);
+        Square toSquare = static_cast<Square>((toRow * 8) + toFile);
 
         if (promotionPiece != 0) {
             MoveFlag cap = (b.board[toSquare].pieceType != N_PIECES) ? CAPTURE : QUIET;

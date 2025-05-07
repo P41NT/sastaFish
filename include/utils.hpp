@@ -58,11 +58,11 @@ enum PieceType {
     N_PIECES
 };
 
-enum castlingRights : int {
-    CASTLE_KING_WHITE = 1,
-    CASTLE_QUEEN_WHITE = 2,
-    CASTLE_KING_BLACK = 4,
-    CASTLE_QUEEN_BLACK = 8
+enum castlingRights : uint8_t {
+    CASTLE_KING_WHITE = 1u,
+    CASTLE_QUEEN_WHITE = 2u,
+    CASTLE_KING_BLACK = 4u,
+    CASTLE_QUEEN_BLACK = 8u
 };
 
 const std::string pieceCharacters[2][6] = {
@@ -97,7 +97,7 @@ const std::map<std::string, Square> wordSquare = {
     {"a1", A1}, {"b1", B1}, {"c1", C1}, {"d1", D1}, {"e1", E1}, {"f1", F1}, {"g1", G1}, {"h1", H1},
 };
 
-const std::unordered_map<char, int> pieceNumberMap = {
+const std::unordered_map<char, uint8_t> pieceNumberMap = {
         {'P', 0},
         {'N', 1},
         {'B', 2},

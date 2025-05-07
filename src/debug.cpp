@@ -40,8 +40,8 @@ namespace debug {
     }
 
     void printBoard(Board &b) {
-        for (int rank = 0; rank < 8; rank++) {
-            for (int file = 0; file < 8; file++) {
+        for (size_t rank = 0; rank < 8; rank++) {
+            for (size_t file = 0; file < 8; file++) {
                 if (!file) std::cerr << 8 - rank << "\t";
                 std::cerr << printPiece(b.board[rank * 8 + file]) << " ";
             }
@@ -79,7 +79,7 @@ namespace debug {
             for (int file = 0; file < 8; file++) {
                 int square = rank * 8 + file;
                 if (!file) std::cerr << 8 - rank << "\t";
-                std::cerr << bitboard::getBit(in, (Square)(square)) << " ";
+                std::cerr << bitboard::getBit(in, static_cast<Square>(square)) << " ";
             }
             std::cerr << std::endl;
         }
