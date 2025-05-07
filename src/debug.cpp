@@ -3,7 +3,6 @@
 #include "../include/evaluation.hpp"
 
 #include <iostream>
-#include <cstdio>
 #include <sstream>
 
 namespace debug {
@@ -72,7 +71,6 @@ namespace debug {
         polyglotSS << std::hex << b.polyglotHash;
 
         std::cerr << "Polyglot Hash : 0x" << polyglotSS.str() << std::endl;
-
         std::cerr << "Static Evaluation : " << eval::evaluateBoard(b) << std::endl;
     }
 

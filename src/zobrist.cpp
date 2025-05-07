@@ -1,41 +1,58 @@
 #include "../include/zobrist.hpp"
-
-#include <random>
-#include <chrono>
+#include "../include/movegen.hpp"
 
 namespace zobrist {
-    uint64_t hashTable[64][6][2];
-    uint64_t hashCastle[16];
-    uint64_t hashEnPassant[64];
-    uint64_t hashSideToMove[2];
+    uint64_t getPieceHash(Piece p, Square square) {
+        int pieceNumber = (p.pieceType * 2) + (p.color == BLACK ? 0 : 1);
+        int squareNumber = polyglotMap[square];
+        int offset = pieceNumber * 64 + squareNumber;
+        return Random64[offset];
+    }
 
-    void init() {
-        // std::mt19937_64 rng(std::chrono::steady_clock::now().time_since_epoch().count());
-        std::mt19937_64 rng(0);
-        for (int boardIndex = 0; boardIndex < 64; boardIndex++) {
-            hashEnPassant[boardIndex] = rng();
-            for (int pieceIndex = 0; pieceIndex < 6; pieceIndex++) {
-                for (int side = 0; side < 2; side++) {
-                    hashTable[boardIndex][pieceIndex][side] = rng();
-                }
-            }
-        }
-        for (int castleInd = 0; castleInd < 16; castleInd++) hashCastle[castleInd] = rng();
-        for (int side = 0; side < 2; side++) hashSideToMove[side] = rng();
+    uint64_t getCastleHash(uint8_t c) {
+        static const int castleOffset = 768;
+        uint64_t hash = 0;
+        if (c & CASTLE_KING_WHITE)  hash ^= Random64[castleOffset + 0];
+        if (c & CASTLE_QUEEN_WHITE) hash ^= Random64[castleOffset + 1];
+        if (c & CASTLE_KING_BLACK)  hash ^= Random64[castleOffset + 2]; 
+        if (c & CASTLE_QUEEN_BLACK) hash ^= Random64[castleOffset + 3];
+        return hash;
+    }
+
+    uint64_t getEnPassantHash(Square square) {
+        static const int enPassantOffset = 772;
+        if (square == N_SQUARES) return 0;
+        return Random64[enPassantOffset + (square % 8)];
+    }
+
+    uint64_t getTurnHash(Color curr) {
+        static const int turnOffset = 780;
+        if (curr == BLACK) return 0;
+        return Random64[turnOffset];
     }
 
     uint64_t hashBoard(const Board &b) {
         uint64_t hash = 0;
         for (int i = 0; i < 64; i++) {
             if (b.board[i].pieceType != PieceType::N_PIECES) {
-                int p = static_cast<int>(b.board[i].pieceType);
-                int c = static_cast<int>(b.board[i].color);
-                hash ^= hashTable[i][p][c];
+                hash ^= getPieceHash(b.board[i], (Square)i);
             }
         }
-        hash ^= hashCastle[b.currState.castlingState];
-        hash ^= hashEnPassant[b.currState.enPassantSquare];
-        hash ^= hashSideToMove[b.currState.currentPlayer];
+        hash ^= getCastleHash(b.currState.castlingState);
+
+        hash ^= getTurnHash(b.currState.currentPlayer);
+
+        bb epSquareBB = bitboard::setbitr(0ull, b.currState.enPassantSquare);
+
+        if (b.currState.polyglotEnPassant) {
+            bb pawnAttacks = b.currState.currentPlayer == WHITE ? 
+                moveGen::blackPawnAttacks(epSquareBB, b.bitboards[b.currState.currentPlayer][PAWN]) :
+                moveGen::whitePawnAttacks(epSquareBB, b.bitboards[b.currState.currentPlayer][PAWN]);
+            if (pawnAttacks) {
+                hash ^= getEnPassantHash(b.currState.enPassantSquare);
+            }
+        }
+
         return hash;
     }
 }

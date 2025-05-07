@@ -3,7 +3,6 @@
 #include "../include/colors.hpp"
 #include "../include/openingbook.hpp"
 
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <sstream>
@@ -12,7 +11,7 @@
 namespace uci {
     std::stack<uint64_t> initialStack;
 
-    void uciLoop(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk) {
+    void uciLoop(Board &b, TTable &tt, RepetitionTable &rt, book::Book &bk) {
         const TermColor::Modifier bannerColor(TermColor::FG_GREEN);
         const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
         const TermColor::Modifier errorColor(TermColor::FG_RED);
@@ -29,7 +28,7 @@ namespace uci {
 
             if (command == "uci") inputUci();
             else if (command == "quit" || command == "stop") break;
-            else if (command == "isready") inputIsReady(rt);
+            else if (command == "isready") inputIsReady();
             else if (command.rfind("position", 0) == 0) inputPosition(b, command, rt);
             else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt, bk, command);
             else if (command == "debug") debug(b);
@@ -51,7 +50,7 @@ namespace uci {
         std::cout << "uciok" << std::endl;
     }
 
-    void inputIsReady(RepetitionTable &rt) {
+    void inputIsReady() {
         std::cout << "readyok" << std::endl;
     }
 
@@ -88,7 +87,7 @@ namespace uci {
         }
     }
 
-    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book &bk, std::string &command) {
+    void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, book::Book &bk, std::string &command) {
         std::istringstream iss(command);
 
         std::string go;

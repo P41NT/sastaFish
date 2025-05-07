@@ -31,7 +31,6 @@ public:
     std::stack<Piece> captured;
     std::stack<GameState> gameStates;
 
-    // uint64_t zobristHash;
     uint64_t polyglotHash;
 
     GameState currState;
@@ -43,7 +42,6 @@ public:
     Board();
 
     void makeMove(Move move);
-    void unMakeMove(Move move);
     void unMakeMove();
 
     void setFEN(std::string &FEN);

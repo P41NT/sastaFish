@@ -4,7 +4,6 @@
 #include "../include/movegen.hpp"
 #include "../include/ttable.hpp"
 #include "../include/openingbook.hpp"
-#include "../include/debug.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -153,7 +152,7 @@ namespace search {
         return alpha;
     }
 
-    Move bestMove(Board &b, TTable &tt, RepetitionTable &rt, openingbook::Book& bk, int maxDepth,
+    Move bestMove(Board &b, TTable &tt, RepetitionTable &rt, book::Book& bk, int maxDepth,
             int maxTime, int &nodes, int &depth, int &score) {
         
         std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
@@ -161,7 +160,7 @@ namespace search {
         auto entries = bk.getEntries(b.polyglotHash);
         if (entries.size() != 0) {
             int nextMove = rng() % std::min(5, (int)entries.size());
-            return openingbook::convertToMove(entries[nextMove], b);
+            return book::convertToMove(entries[nextMove], b);
         }
         Move result = iterativeDeepening(b, tt, rt, maxDepth, maxTime, nodes, depth, score);
         return result;

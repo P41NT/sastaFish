@@ -1,14 +1,10 @@
 #include "../include/openingbook.hpp"
 #include "../include/board.hpp"
-#include "../include/movegen.hpp"
-#include "..//include/debug.hpp"
 
 #include <cstdint>
 #include <iostream>
 #include <ios>
 #include <algorithm>
-#include <limits>
-#include <sstream>
 
 uint16_t read16BigEndian(const char* buffer) {
     return (static_cast<uint8_t>(buffer[0]) << 8) |
@@ -28,61 +24,7 @@ uint64_t read64BigEndian(const char* buffer) {
     return (hi << 32) | lo;
 }
 
-namespace openingbook {
-    uint64_t getPieceHash(Piece p, Square square) {
-        int pieceNumber = (p.pieceType * 2) + (p.color == BLACK ? 0 : 1);
-        int squareNumber = polyglotMap[square];
-        int offset = pieceNumber * 64 + squareNumber;
-        return Random64[offset];
-    }
-
-    uint64_t getCastleHash(uint8_t c) {
-        static const int castleOffset = 768;
-        uint64_t hash = 0;
-        if (c & CASTLE_KING_WHITE)  hash ^= Random64[castleOffset + 0];
-        if (c & CASTLE_QUEEN_WHITE) hash ^= Random64[castleOffset + 1];
-        if (c & CASTLE_KING_BLACK)  hash ^= Random64[castleOffset + 2]; 
-        if (c & CASTLE_QUEEN_BLACK) hash ^= Random64[castleOffset + 3];
-        return hash;
-    }
-
-    uint64_t getEnPassantHash(Square square) {
-        static const int enPassantOffset = 772;
-        if (square == N_SQUARES) return 0;
-        return Random64[enPassantOffset + (square % 8)];
-    }
-
-    uint64_t getTurnHash(Color curr) {
-        static const int turnOffset = 780;
-        if (curr == BLACK) return 0;
-        return Random64[turnOffset];
-    }
-
-    uint64_t hashBoard(const Board &b) {
-        uint64_t hash = 0;
-        for (int i = 0; i < 64; i++) {
-            if (b.board[i].pieceType != PieceType::N_PIECES) {
-                hash ^= getPieceHash(b.board[i], (Square)i);
-            }
-        }
-        hash ^= getCastleHash(b.currState.castlingState);
-
-        hash ^= getTurnHash(b.currState.currentPlayer);
-
-        bb epSquareBB = bitboard::setbitr(0ull, b.currState.enPassantSquare);
-
-        if (b.currState.polyglotEnPassant) {
-            bb pawnAttacks = b.currState.currentPlayer == WHITE ? 
-                moveGen::blackPawnAttacks(epSquareBB, b.bitboards[b.currState.currentPlayer][PAWN]) :
-                moveGen::whitePawnAttacks(epSquareBB, b.bitboards[b.currState.currentPlayer][PAWN]);
-            if (pawnAttacks) {
-                hash ^= getEnPassantHash(b.currState.enPassantSquare);
-            }
-        }
-
-        return hash;
-    }
-
+namespace book {
     Book::Book(std::string &&filename) {
         std::ifstream bookFile(filename, std::ios::in | std::ios::binary);
 
@@ -101,8 +43,6 @@ namespace openingbook {
             entry.weight = read16BigEndian(buffer + 10);
             entry.learn  = read32BigEndian(buffer + 12);
         }
-        uint64_t positionKey = 0x463b96181691fc9cULL;
-
         bookFile.close();
     }
 

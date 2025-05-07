@@ -109,7 +109,6 @@ namespace eval {
     }
 
     int mvvlvaScore(Move mv, Board &b) {
-        int score = 0;
         if (mv.isCapture()) {
             PieceType piece = b.board[mv.from()].pieceType;
             PieceType capturedPiece = b.board[mv.to()].pieceType;

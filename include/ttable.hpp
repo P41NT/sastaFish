@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <stack>
 #include <cstdint>
 
 #include "move.hpp"
@@ -23,16 +22,15 @@ static const int TTableSize = 1 << 20;
 class TTable {
     std::array<TTableEntry, TTableSize> transpositionTable;
 
-    public:
+public:
     TTableEntry* getEntry(uint64_t hash);
     void setEntry(uint64_t hash, int depth, int score, TTableFlag flag, Move bestMove);
 };
 
 class RepetitionTable {
     std::array<int, TTableSize> repetitionTable;
-    std::stack<uint64_t> hashStack;
 
-    public:
+public:
     int getEntry(uint64_t hash);
     void increment(uint64_t hash);
     void decrement(uint64_t hash);

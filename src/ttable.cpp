@@ -1,6 +1,5 @@
 #include "../include/ttable.hpp"
 #include <cstdint>
-#include <cstdlib>
 
 void TTable::setEntry(uint64_t hash, int depth, int score, TTableFlag flag, Move bestMove) {
     TTableEntry &entry = transpositionTable[hash % TTableSize];
@@ -23,7 +22,6 @@ int RepetitionTable::getEntry(uint64_t hash) {
 }
 
 void RepetitionTable::increment(uint64_t hash) {
-    hashStack.push(hash);
     repetitionTable[hash % TTableSize]++;
 }
 
