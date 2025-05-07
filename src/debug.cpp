@@ -68,12 +68,9 @@ namespace debug {
             std::cerr << std::endl;
         }
 
-        std::stringstream zobristSS;
         std::stringstream polyglotSS;
-        zobristSS << std::hex << b.zobristHash;
         polyglotSS << std::hex << b.polyglotHash;
 
-        std::cerr << "Zobrist Hash : 0x" << zobristSS.str() << std::endl;
         std::cerr << "Polyglot Hash : 0x" << polyglotSS.str() << std::endl;
 
         std::cerr << "Static Evaluation : " << eval::evaluateBoard(b) << std::endl;

@@ -31,7 +31,7 @@ public:
     std::stack<Piece> captured;
     std::stack<GameState> gameStates;
 
-    uint64_t zobristHash;
+    // uint64_t zobristHash;
     uint64_t polyglotHash;
 
     GameState currState;

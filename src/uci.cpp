@@ -65,8 +65,8 @@ namespace uci {
         if (option == "startpos") {
             static std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
             b.setFEN(defaultFEN);
-            rt.increment(b.zobristHash);
-            initialStack.push(b.zobristHash);
+            rt.increment(b.polyglotHash);
+            initialStack.push(b.polyglotHash);
         }
         else if (option == "fen") {
             std::string FEN; 
@@ -82,8 +82,8 @@ namespace uci {
             std::string move;
             while (iss >> move) {
                 b.makeMove(parseMove(b, move));
-                rt.increment(b.zobristHash);
-                initialStack.push(b.zobristHash);
+                rt.increment(b.polyglotHash);
+                initialStack.push(b.polyglotHash);
             }
         }
     }
@@ -99,15 +99,12 @@ namespace uci {
         int nodes = 0;
         int score = 0;
         int depth = 0;
-        int maxDepth = 30;
+        int maxDepth = 60;
 
-        auto start = std::chrono::high_resolution_clock::now();
-
-        int numMoves = b.moves.size();
         int maxTime = 1000;
 
         if (option == "infinite") {
-            maxTime = 10000;
+            maxTime = 100000;
         }
         else if (option == "depth") {
             iss >> maxDepth;

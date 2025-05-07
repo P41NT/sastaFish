@@ -5,12 +5,26 @@
 #include <utility>
 
 namespace eval {
-    static constexpr std::array<int, 6> pieceValues = { 100, 300, 325, 500, 900, 0 };
+    static constexpr std::array<int, 6> pieceValues = { 100, 300, 325, 500, 900, 10000 };
+
+    static constexpr std::array<std::array<int, 6>, 6> generate_mvv_lva_table() {
+        std::array<std::array<int, 6>, 6> table{};
+
+        for (int victim = 0; victim < 6; victim++) {
+            for (int attacker = 0; attacker < 6; attacker++) {
+                table[victim][attacker] = pieceValues[victim] * 10 - pieceValues[attacker];
+            }
+        }
+        return table;
+    }
+
+    static constexpr std::array<std::array<int, 6>, 6> MVVLVA = generate_mvv_lva_table();
+
     static const int materialWeight = 1;
     static const int mobilityWeight = 4;
 
     int evaluateBoard(Board &b);
-    int materialScore(Board &b);
+    int materialScore(Board &b, bool endgame);
     std::pair<int, int> mobility(Board &b);
 
     int staticExchange(Board &b, Square sq);
@@ -150,5 +164,7 @@ namespace eval {
            -30, -40, -40, -50, -50, -40, -40, -30
         }
     }};
+
+    int mvvlvaScore(Move mv, Board &b);
 }
 

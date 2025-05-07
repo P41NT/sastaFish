@@ -1,7 +1,6 @@
 #include "../include/uci.hpp"
 #include "../include/movegen.hpp"
 #include "../include/board.hpp"
-#include "../include/zobrist.hpp"
 #include "../include/ttable.hpp"
 #include "../include/colors.hpp"
 #include "../include/openingbook.hpp"
@@ -37,7 +36,6 @@ int main() {
     // freopen("log.txt", "w", stderr);
 
     moveGen::init();
-    zobrist::init();
 
     Board *b = new Board();
 

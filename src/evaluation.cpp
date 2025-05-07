@@ -5,27 +5,9 @@
 #include <iostream>
 
 namespace eval {
+
     int evaluateBoard(Board &b) {
-        int mat = materialScore(b) * materialWeight;
-        // auto mobs = mobility(b);
-        // int mob = mobilityWeight * (mobs.first - mobs.second);
 
-        // if (b.currState.currentPlayer == WHITE) {
-        //     if (mobs.first == 0 && b.currState.isInCheck) return -inf;
-        //     else if (mobs.first == 0) return 0;
-        // }
-        //
-        // if (b.currState.currentPlayer == BLACK) {
-        //     if (mobs.second == 0 && b.currState.isInCheck) {
-        //         return -inf;
-        //     }
-        //     else if (mobs.second == 0) return 0;
-        // }
-
-        return (b.currState.currentPlayer == WHITE ? 1 : -1) * (mat);
-    }
-
-    int materialScore(Board &b) {
         bb minormajorPieces = b.bitboards[WHITE][KNIGHT] | b.bitboards[WHITE][BISHOP] |
                               b.bitboards[BLACK][KNIGHT] | b.bitboards[BLACK][BISHOP] |
                               b.bitboards[WHITE][ROOK] | b.bitboards[WHITE][QUEEN] |
@@ -34,6 +16,19 @@ namespace eval {
 
         int numPieces = bitboard::numBits(minormajorPieces);
         bool endgame = (numPieces <= 4);
+
+        int mat = materialScore(b, endgame) * materialWeight;
+
+        if (endgame) {
+            auto mobs = mobility(b);
+            int mob = mobilityWeight * (mobs.first - mobs.second);
+            mat += mob;
+        }
+
+        return (b.currState.currentPlayer == WHITE ? 1 : -1) * (mat);
+    }
+
+    int materialScore(Board &b, bool endgame) {
 
         int score = 0;
         for (auto side : {WHITE,  BLACK}) {
@@ -111,5 +106,15 @@ namespace eval {
         std::cerr << std::endl;
 
         return gain[0];
+    }
+
+    int mvvlvaScore(Move mv, Board &b) {
+        int score = 0;
+        if (mv.isCapture()) {
+            PieceType piece = b.board[mv.from()].pieceType;
+            PieceType capturedPiece = b.board[mv.to()].pieceType;
+            return MVVLVA[capturedPiece][piece];
+        }
+        return 0;
     }
 }

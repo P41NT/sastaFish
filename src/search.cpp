@@ -34,25 +34,30 @@ namespace search {
             else return 0;
         }
 
-
         auto legal = moveGen::genLegalMoves(b);
+        std::sort(legal.begin(), legal.end(), [&b](Move x, Move y) {
+            return eval::mvvlvaScore(x, b) > eval::mvvlvaScore(y, b);
+        });
+
+        static const int delta = 25;
         
         bool searchCut = false;
         for (auto mv : legal) {
-            if (mv.isCapture()) {
+            if (!mv.isCapture()) break;
 
-                b.makeMove(mv);
-                int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
-                b.unMakeMove();
+            if (eval::pieceValues[b.board[mv.from()].pieceType] + standingPat + delta < alpha) continue;
 
-                if (stopSearch) {
-                    searchCut = true;
-                    break;
-                }
+            b.makeMove(mv);
+            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
+            b.unMakeMove();
 
-                if (score > alpha) alpha = score;
-                if (alpha >= beta) break;
+            if (stopSearch) {
+                searchCut = true;
+                break;
             }
+
+            if (score > alpha) alpha = score;
+            if (alpha >= beta) break;
         }
 
         if (searchCut) return originalAlpha;
@@ -62,14 +67,13 @@ namespace search {
 
     int alphaBetaSearch(Board &b, TTable &tt, RepetitionTable &rt, int alpha, int beta, int depth, 
             int &nodes, std::atomic<bool> &stopSearch) {
-
         nodes++;
 
-        if (rt.getEntry(b.zobristHash) >= 2) { 
+        if (rt.getEntry(b.polyglotHash) >= 2) { 
             return 0; 
         }
 
-        TTableEntry *entry = tt.getEntry(b.zobristHash);
+        TTableEntry *entry = tt.getEntry(b.polyglotHash);
         Move bestMove;
         if (entry != nullptr && entry->depth >= depth) {
             switch (entry->flag) {
@@ -89,21 +93,24 @@ namespace search {
         int originalAlpha = alpha;
 
         std::vector<Move> legalMoves = moveGen::genLegalMoves(b);
+
         if (legalMoves.empty()) {
             if (b.currState.isInCheck) return -inf;
             else return 0;
         }
 
+        // std::sort(legalMoves.begin(), legalMoves.end(), [&b](Move x, Move y) {
+        //     return eval::mvvlvaScore(x, b) > eval::mvvlvaScore(y, b);
+        // });
+
         bool searchCut = false;
 
         if (depth == 0) {
-            int result = quiesce(b, alpha, beta, 6, stopSearch);
+            int result = quiesce(b, alpha, beta, 10, stopSearch);
             if (stopSearch) 
                 return originalAlpha;
             return result;
         }
-
-        bool nextDebug = false;
 
         for (auto mv : legalMoves) {
             // if (mv.isCapture()) {
@@ -115,9 +122,9 @@ namespace search {
             if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
             b.makeMove(mv);
-            rt.increment(b.zobristHash);
+            rt.increment(b.polyglotHash);
             int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-            rt.decrement(b.zobristHash);
+            rt.decrement(b.polyglotHash);
             b.unMakeMove();
 
             if (stopSearch) {
@@ -142,7 +149,7 @@ namespace search {
         if (alpha <= originalAlpha) flag = UPPERBOUND;
         else if (alpha >= beta) flag = LOWERBOUND;
 
-        tt.setEntry(b.zobristHash, depth, alpha, flag, bestMove);
+        tt.setEntry(b.polyglotHash, depth, alpha, flag, bestMove);
         return alpha;
     }
 
@@ -194,9 +201,9 @@ namespace search {
 
             if (iterBestMove.move != 0000) {
                 b.makeMove(iterBestMove);
-                rt.increment(b.zobristHash);
+                rt.increment(b.polyglotHash);
                 int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-                rt.decrement(b.zobristHash);
+                rt.decrement(b.polyglotHash);
                 b.unMakeMove();
 
                 if (stopSearch) {
@@ -212,10 +219,10 @@ namespace search {
                 if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
                 b.makeMove(mv);
-                rt.increment(b.zobristHash);
+                rt.increment(b.polyglotHash);
 
                 int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-                rt.decrement(b.zobristHash);
+                rt.decrement(b.polyglotHash);
                 b.unMakeMove();
 
                 if (stopSearch) {
@@ -223,9 +230,8 @@ namespace search {
                     break;
                 }
 
-                std::cerr << std::hex << b.zobristHash << " " << b.polyglotHash << " " << std::dec << mv.getUciString() << " " << eval << " " << depth << std::endl;
-
                 if (eval > alpha) {
+                    std::cerr << mv.getUciString() << " " << eval << std::endl;
                     alpha = eval;
                     iterBestMove = mv;
                 }
@@ -237,7 +243,7 @@ namespace search {
             }
             if (stopSearch) break;
 
-            std::cerr << iterBestMove.getUciString() << " " << bestValue << std::endl;
+            std::cerr << iterBestMove.getUciString() << " " << bestValue << " " << depth << std::endl;
             std::cerr << std::endl;
         }
 
@@ -245,8 +251,6 @@ namespace search {
         conditionVar.notify_one();
         searchThread.join();
         depth--;
-
-        debug::printBoard(b);
 
         score = bestValue;
         return bestMove;
