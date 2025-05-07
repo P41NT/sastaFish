@@ -230,7 +230,6 @@ namespace search {
                 }
 
                 if (eval > alpha) {
-                    std::cerr << mv.getUciString() << " " << eval << std::endl;
                     alpha = eval;
                     iterBestMove = mv;
                 }
@@ -241,9 +240,6 @@ namespace search {
                 bestMove = iterBestMove;
             }
             if (stopSearch) break;
-
-            std::cerr << iterBestMove.getUciString() << " " << bestValue << " " << depth << std::endl;
-            std::cerr << std::endl;
         }
 
         stopSearch = true;

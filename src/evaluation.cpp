@@ -100,11 +100,6 @@ namespace eval {
         for (int i = depth - 1; i >= 0; i--) 
             gain[i] = std::max(-gain[i + 1], gain[i]);
 
-        for (int i = 0; i < depth; i++) {
-            std::cerr << gain[i] << " ";
-        }
-        std::cerr << std::endl;
-
         return gain[0];
     }
 
