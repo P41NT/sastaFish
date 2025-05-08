@@ -60,9 +60,9 @@ Board::Board(std::string FEN) {
 
     const std::map<char, uint8_t> maptocastle = {
         { 'Q', CASTLE_QUEEN_WHITE },
-        { 'K', CASTLE_KING_WHITE},
-        { 'q', CASTLE_QUEEN_BLACK},
-        { 'k', CASTLE_KING_BLACK},
+        { 'K', CASTLE_KING_WHITE },
+        { 'q', CASTLE_QUEEN_BLACK },
+        { 'k', CASTLE_KING_BLACK },
     };
 
     currState.castlingState = 0;
@@ -146,8 +146,8 @@ void Board::makeMove(Move mv) {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareK);
 
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookFromSquareK);
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookToSquareK);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookFromSquareK);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookToSquareK);
 
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
@@ -160,8 +160,8 @@ void Board::makeMove(Move mv) {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareQ);
 
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookFromSquareQ);
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookToSquareQ);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookFromSquareQ);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookToSquareQ);
 
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);
@@ -210,7 +210,6 @@ void Board::makeMove(Move mv) {
         }
     }
 
-
     polyglotHash ^= zobrist::getCastleHash(currState.castlingState);
 
     const Color opps = static_cast<Color>(static_cast<int>(currState.currentPlayer) ^ 1);
@@ -238,7 +237,6 @@ void Board::makeMove(Move mv) {
 }
 
 void Board::unMakeMove() {
-
     if (moves.empty()) return;
     Move mv = moves.top();
     moves.pop();
@@ -321,8 +319,8 @@ void Board::unMakeMove() {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareK);
 
 
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookFromSquareK);
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookToSquareK);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookFromSquareK);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookToSquareK);
 
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareK);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareK);
@@ -335,8 +333,8 @@ void Board::unMakeMove() {
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][ROOK], rookToSquareQ);
 
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookFromSquareQ);
-                polyglotHash ^= zobrist::getPieceHash(fromPiece, rookToSquareQ);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookFromSquareQ);
+                polyglotHash ^= zobrist::getPieceHash({ROOK, fromPiece.color}, rookToSquareQ);
 
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookFromSquareQ);
                 bitboard::toggleBit(bitboards[fromPiece.color][6], rookToSquareQ);

@@ -33,8 +33,6 @@ void printBanner() {
 int main() {
     printBanner();
 
-    // freopen("log.txt", "w", stderr);
-
     moveGen::init();
 
     Board *b = new Board();

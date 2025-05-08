@@ -12,9 +12,10 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <iostream>
 
 namespace search {
-    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
+    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch, bool debug) {
         int standingPat = eval::evaluateBoard(b);
 
         if (depth == 0) return standingPat;
@@ -44,8 +45,12 @@ namespace search {
             if (eval::pieceValues[b.board[mv.from()].pieceType] + standingPat + delta < alpha) continue;
 
             b.makeMove(mv);
-            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
+            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch, debug);
             b.unMakeMove();
+
+            if (debug) {
+                std::cerr << mv.getUciString() << " " << b.polyglotHash << " " << depth << std::endl;
+            }
 
             if (stopSearch) {
                 searchCut = true;
@@ -62,7 +67,7 @@ namespace search {
     }
 
     int alphaBetaSearch(Board &b, TTable &tt, RepetitionTable &rt, int alpha, int beta, int depth, 
-            int &nodes, std::atomic<bool> &stopSearch) {
+            int &nodes, std::atomic<bool> &stopSearch, bool debug) {
         nodes++;
 
         if (rt.getEntry(b.polyglotHash) >= 2) { 
@@ -102,7 +107,7 @@ namespace search {
         bool searchCut = false;
 
         if (depth == 0) {
-            int result = quiesce(b, alpha, beta, 10, stopSearch);
+            int result = quiesce(b, alpha, beta, 10, stopSearch, debug);
             if (stopSearch) 
                 return originalAlpha;
             return result;
@@ -117,9 +122,11 @@ namespace search {
             
             if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
+            bool nextDebug = debug;
+
             b.makeMove(mv);
             rt.increment(b.polyglotHash);
-            int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
+            int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, nextDebug);
             rt.decrement(b.polyglotHash);
             b.unMakeMove();
 
@@ -200,7 +207,7 @@ namespace search {
             if (iterBestMove.move != 0000) {
                 b.makeMove(iterBestMove);
                 rt.increment(b.polyglotHash);
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, false);
                 rt.decrement(b.polyglotHash);
                 b.unMakeMove();
 
@@ -216,12 +223,14 @@ namespace search {
 
                 if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
+                bool debug = (depth == 1 && mv.from() == E1 && mv.to() == G1);
+
                 b.makeMove(mv);
                 rt.increment(b.polyglotHash);
-
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, debug);
                 rt.decrement(b.polyglotHash);
                 b.unMakeMove();
+
 
                 if (stopSearch) {
                     searchCut = true;
@@ -239,6 +248,7 @@ namespace search {
                 bestMove = iterBestMove;
             }
             if (stopSearch) break;
+
         }
 
         stopSearch = true;

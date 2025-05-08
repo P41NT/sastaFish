@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -Weffc++ -Wshadow -Wconversion -Wsign-conversion -Wfloat-equal -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused
+CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -Weffc++ 
 
 SRC_DIR := src
 INC_DIR := include

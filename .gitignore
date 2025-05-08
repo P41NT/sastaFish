@@ -9,6 +9,4 @@ build/
 *.a
 *.so
 
-data/
-
 .gdb_history

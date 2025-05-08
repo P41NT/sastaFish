@@ -41,6 +41,16 @@ enum Square : uint8_t {
   N_SQUARES,
 };
 
+static constexpr int polyglotMap[64] = {
+    56, 57, 58, 59, 60, 61, 62, 63,
+    48, 49, 50, 51, 52, 53, 54, 55,
+    40, 41, 42, 43, 44, 45, 46, 47,
+    32, 33, 34, 35, 36, 37, 38, 39,
+    24, 25, 26, 27, 28, 29, 30, 31,
+    16, 17, 18, 19, 20, 21, 22, 23,
+     8,  9, 10, 11, 12, 13, 14, 15,
+     0,  1,  2,  3,  4,  5,  6,  7
+};
 
 enum Color : int {
     WHITE = 0,
@@ -58,11 +68,11 @@ enum PieceType {
     N_PIECES
 };
 
-enum castlingRights : uint8_t {
-    CASTLE_KING_WHITE = 1u,
-    CASTLE_QUEEN_WHITE = 2u,
-    CASTLE_KING_BLACK = 4u,
-    CASTLE_QUEEN_BLACK = 8u
+enum castlingRights : int {
+    CASTLE_KING_WHITE = 1,
+    CASTLE_QUEEN_WHITE = 2,
+    CASTLE_KING_BLACK = 4,
+    CASTLE_QUEEN_BLACK = 8
 };
 
 const std::string pieceCharacters[2][6] = {
@@ -97,7 +107,7 @@ const std::map<std::string, Square> wordSquare = {
     {"a1", A1}, {"b1", B1}, {"c1", C1}, {"d1", D1}, {"e1", E1}, {"f1", F1}, {"g1", G1}, {"h1", H1},
 };
 
-const std::unordered_map<char, uint8_t> pieceNumberMap = {
+const std::unordered_map<char, int> pieceNumberMap = {
         {'P', 0},
         {'N', 1},
         {'B', 2},
