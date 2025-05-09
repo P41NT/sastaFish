@@ -18,6 +18,8 @@ namespace uci {
     void outputBestMove(Board &b, TTable &tt, RepetitionTable &rt, book::Book &bk, std::string &command);
     Move parseMove(Board &b, const std::string &mv);
 
+    void helpBanner();
+
     inline void debug(Board &b) {
         debug::printBoard(b);
     }

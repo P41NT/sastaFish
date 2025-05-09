@@ -12,7 +12,6 @@
 #include <thread>
 #include <chrono>
 #include <random>
-#include <iostream>
 
 namespace search {
     int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
@@ -36,7 +35,7 @@ namespace search {
             return eval::mvvlvaScore(x, b) > eval::mvvlvaScore(y, b);
         });
 
-        static const int delta = 25;
+        static const int delta = 50;
         
         bool searchCut = false;
         for (auto mv : legal) {
@@ -201,7 +200,7 @@ namespace search {
             if (iterBestMove.move != 0000) {
                 b.makeMove(iterBestMove);
                 rt.increment(b.polyglotHash);
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, false);
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
                 rt.decrement(b.polyglotHash);
                 b.unMakeMove();
 
@@ -217,11 +216,9 @@ namespace search {
 
                 if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
-                bool debug = (depth == 1 && mv.from() == E1 && mv.to() == G1);
-
                 b.makeMove(mv);
                 rt.increment(b.polyglotHash);
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, debug);
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
                 rt.decrement(b.polyglotHash);
                 b.unMakeMove();
 

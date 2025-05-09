@@ -32,6 +32,7 @@ namespace uci {
             else if (command.rfind("position", 0) == 0) inputPosition(b, command, rt);
             else if (command.rfind("go", 0) == 0) outputBestMove(b, tt, rt, bk, command);
             else if (command == "debug") debug(b);
+            else if (command == "help") helpBanner();
             else {
                 std::cerr << errorColor << "> Unknown command: " << command << defaultColor << std::endl;
             }
@@ -42,6 +43,49 @@ namespace uci {
         }
 
     } 
+
+    void helpBanner() {
+        static const std::string topAvail = ">>> Available commands:";
+
+        static const std::array<std::string, 13> helpCommands = {
+            "uci", "quit", "isready", "position",
+            "  ├── position startpos",
+            "  └── position fen <FEN>",
+            "go",
+            "  ├── go infinite",
+            "  ├── go depth <depth>",
+            "  ├── go movetime <time>",
+            "  └── go wtime <time> btime <time>",
+            "debug", "help"
+        };
+
+        static const std::array<std::string, 13> helpDescriptions = {
+            "Start the UCI protocol",
+            "Exit the engine",
+            "Check if the engine is ready",
+            "Set up the position",
+            "Set up the starting position",
+            "Set up the position from a FEN string",
+            "Start searching for the best move",
+            "Search indefinitely",
+            "Search to a specific depth",
+            "Search for a specific time in ms",
+            "Search with a specific time left for each side",
+            "Print the current board state",
+            "Show this help message"
+        };
+
+        static const TermColor::Modifier topAvailColor(TermColor::FG_YELLOW);
+        static const TermColor::Modifier defaultColor(TermColor::FG_DEFAULT);
+        std::cerr << topAvailColor << topAvail << defaultColor << std::endl;
+
+        static const TermColor::Modifier commandColor(TermColor::FG_CYAN);
+
+        for (size_t i = 0; i < helpCommands.size(); ++i) {
+            std::cerr << "\t" << commandColor << helpCommands[i] << defaultColor 
+                      << " - " << helpDescriptions[i] << std::endl;
+            }
+    }
 
     void inputUci() {
         std::cout << "id name " << engineName << std::endl;
