@@ -15,7 +15,7 @@
 #include <iostream>
 
 namespace search {
-    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch, bool debug) {
+    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
         int standingPat = eval::evaluateBoard(b);
 
         if (depth == 0) return standingPat;
@@ -45,12 +45,8 @@ namespace search {
             if (eval::pieceValues[b.board[mv.from()].pieceType] + standingPat + delta < alpha) continue;
 
             b.makeMove(mv);
-            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch, debug);
+            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
             b.unMakeMove();
-
-            if (debug) {
-                std::cerr << mv.getUciString() << " " << b.polyglotHash << " " << depth << std::endl;
-            }
 
             if (stopSearch) {
                 searchCut = true;
@@ -67,7 +63,7 @@ namespace search {
     }
 
     int alphaBetaSearch(Board &b, TTable &tt, RepetitionTable &rt, int alpha, int beta, int depth, 
-            int &nodes, std::atomic<bool> &stopSearch, bool debug) {
+            int &nodes, std::atomic<bool> &stopSearch) {
         nodes++;
 
         if (rt.getEntry(b.polyglotHash) >= 2) { 
@@ -107,7 +103,7 @@ namespace search {
         bool searchCut = false;
 
         if (depth == 0) {
-            int result = quiesce(b, alpha, beta, 10, stopSearch, debug);
+            int result = quiesce(b, alpha, beta, 10, stopSearch);
             if (stopSearch) 
                 return originalAlpha;
             return result;
@@ -122,11 +118,9 @@ namespace search {
             
             if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
-            bool nextDebug = debug;
-
             b.makeMove(mv);
             rt.increment(b.polyglotHash);
-            int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, nextDebug);
+            int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
             rt.decrement(b.polyglotHash);
             b.unMakeMove();
 
