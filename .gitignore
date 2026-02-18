@@ -10,3 +10,17 @@ build/
 *.so
 
 .gdb_history
+
+.vs/
+*.vs.json
+CppProperties.json
+
+*.pdb
+*.obj
+*.exe
+*.ilk
+*.suo
+*.user
+
+*.db
+*.sqlite
