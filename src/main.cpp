@@ -39,7 +39,7 @@ int main() {
 
     TTable *tt = new TTable();
     RepetitionTable *rt = new RepetitionTable();
-    book::Book *bk = new book::Book("data/Human.bin");
+    book::Book *bk = new book::Book("C:\\Users\\shawn\\source\\repos\\sastaFish\\data\\Human.bin");
 
     uci::uciLoop(*b, *tt, *rt, *bk);
 

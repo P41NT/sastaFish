@@ -116,4 +116,4 @@ const std::unordered_map<char, int> pieceNumberMap = {
         {'K', 5},
 };
 
-static const int inf = 1e9;
+static const int inf = (int)1e9;

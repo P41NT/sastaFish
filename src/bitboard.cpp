@@ -1,4 +1,5 @@
 #include "../include/bitboard.hpp"
+#include <intrin.h>
 
 namespace bitboard {
     bb flipVertical(const bb &in) {
@@ -27,16 +28,14 @@ namespace bitboard {
     }
 
     Square getLsb(const bb &in) {
-        bb lsb_bb = in & (-in);
+        bb lsb_bb = in & (~in + 1);
         return static_cast<Square>(bitScanLookup[lsb_bb % 67]);
     }
 
     Square getLsbPop(bb &in) {
-        bb lsb_bb = in & (-in);
+        bb lsb_bb = in & (~in + 1);
         Square answer = static_cast<Square>(bitScanLookup[lsb_bb % 67]);
         in ^= lsb_bb;
         return answer;
     }
-
-    inline int numBits(bb &in) { return __builtin_popcountll(in); }
 }

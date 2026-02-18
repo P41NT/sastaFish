@@ -3,6 +3,11 @@
 #include "utils.hpp"
 #include <cstdint>
 
+#if defined(_MSC_VER)
+#include <immintrin.h>
+#include <intrin.h>
+#endif
+
 using bb = uint64_t;
 
 namespace bitboard {
@@ -42,5 +47,12 @@ namespace bitboard {
     Square getLsb(const bb &in);
     Square getLsbPop(bb &in);
 
-    inline int numBits(bb in) { return __builtin_popcountll(in); }
+
+    inline int numBits(bb in) { 
+        #if defined(_MSC_VER)
+        return (int)__popcnt64(in);
+		#else
+        return __builtin_popcountll(in); 
+		#endif
+    }
 };

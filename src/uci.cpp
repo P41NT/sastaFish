@@ -144,10 +144,10 @@ namespace uci {
         int depth = 0;
         int maxDepth = 60;
 
-        int maxTime = 1000;
+        int maxTime = 10000000;
 
         if (option == "infinite") {
-            maxTime = 100000;
+            maxTime = 10000000;
         }
         else if (option == "depth") {
             iss >> maxDepth;

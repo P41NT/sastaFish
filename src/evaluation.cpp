@@ -6,7 +6,6 @@
 namespace eval {
 
     int evaluateBoard(Board &b) {
-
         bb minormajorPieces = b.bitboards[WHITE][KNIGHT] | b.bitboards[WHITE][BISHOP] |
                               b.bitboards[BLACK][KNIGHT] | b.bitboards[BLACK][BISHOP] |
                               b.bitboards[WHITE][ROOK] | b.bitboards[WHITE][QUEEN] |
@@ -51,10 +50,16 @@ namespace eval {
         Color prevCol = b.currState.currentPlayer;
         std::pair<int, int> mob;
         b.currState.currentPlayer = WHITE;
-        mob.first = static_cast<int>(moveGen::genLegalMoves(b).size());
+
+        MoveList legal1;
+        moveGen::genLegalMoves(b, legal1);
+        mob.first = static_cast<int>(legal1.size());
 
         b.currState.currentPlayer = BLACK;
-        mob.second = static_cast<int>(moveGen::genLegalMoves(b).size());
+
+        MoveList legal2;
+        moveGen::genLegalMoves(b, legal2);
+        mob.second = static_cast<int>(legal2.size());
         b.currState.currentPlayer = prevCol;
 
         return mob;

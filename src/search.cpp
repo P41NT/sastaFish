@@ -14,7 +14,8 @@
 #include <random>
 
 namespace search {
-    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch) {
+    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch, int &nodes) {
+        nodes++;
         int standingPat = eval::evaluateBoard(b);
 
         if (depth == 0) return standingPat;
@@ -24,13 +25,14 @@ namespace search {
 
         int originalAlpha = alpha;
 
-        std::vector<Move> legalMoves = moveGen::genLegalMoves(b);
-        if (legalMoves.empty()) {
+        MoveList legal{};
+        moveGen::genLegalMoves(b, legal);
+
+        if (legal.empty()) {
             if (b.currState.isInCheck) return -inf;
             else return 0;
         }
 
-        auto legal = moveGen::genLegalMoves(b);
         std::sort(legal.begin(), legal.end(), [&b](Move x, Move y) {
             return eval::mvvlvaScore(x, b) > eval::mvvlvaScore(y, b);
         });
@@ -38,13 +40,13 @@ namespace search {
         static const int delta = 50;
         
         bool searchCut = false;
-        for (auto mv : legal) {
+        for (auto &mv : legal) {
             if (!mv.isCapture()) break;
 
             if (eval::pieceValues[b.board[mv.from()].pieceType] + standingPat + delta < alpha) continue;
 
             b.makeMove(mv);
-            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch);
+            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch, nodes);
             b.unMakeMove();
 
             if (stopSearch) {
@@ -88,7 +90,8 @@ namespace search {
 
         int originalAlpha = alpha;
 
-        std::vector<Move> legalMoves = moveGen::genLegalMoves(b);
+        MoveList legalMoves;
+        moveGen::genLegalMoves(b, legalMoves);
 
         if (legalMoves.empty()) {
             if (b.currState.isInCheck) return -inf;
@@ -102,7 +105,7 @@ namespace search {
         bool searchCut = false;
 
         if (depth == 0) {
-            int result = quiesce(b, alpha, beta, 10, stopSearch);
+            int result = quiesce(b, alpha, beta, 10, stopSearch, nodes);
             if (stopSearch) 
                 return originalAlpha;
             return result;
@@ -187,7 +190,8 @@ namespace search {
             }
         });
 
-        std::vector<Move> legalmoves = moveGen::genLegalMoves(b);
+        MoveList legalmoves;
+        moveGen::genLegalMoves(b, legalmoves);
 
         for (depth = 1; depth <= maxDepth; depth++) {
             Move iterBestMove = bestMove;
@@ -212,8 +216,7 @@ namespace search {
                 alpha = eval;
             }
 
-            for (auto mv : legalmoves) {
-
+            for (const auto &mv : legalmoves) {
                 if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
                 b.makeMove(mv);

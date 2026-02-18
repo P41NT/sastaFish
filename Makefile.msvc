@@ -1,0 +1,24 @@
+CXX      = cl.exe
+CXXFLAGS = /O2 /Oi /Ot /Zi /EHsc /std:c++17 /W3 /nologo
+LDFLAGS  = /DEBUG /OPT:REF /OPT:ICF
+
+# Project Structure
+SRC_DIR = src
+OBJ_DIR = obj
+TARGET  = sastafish.exe
+
+OBJS = $(OBJ_DIR)\main.obj $(OBJ_DIR)\board.obj $(OBJ_DIR)\search.obj $(OBJ_DIR)\movegen.obj $(OBJ_DIR)\uci.obj
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(OBJS) /Fe$(TARGET) /link $(LDFLAGS)
+
+{$(SRC_DIR)}.cpp{$(OBJ_DIR)}.obj:
+	@if not exist $(OBJ_DIR) mkdir $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) /c $< /Fo$@
+
+clean:
+	if exist $(OBJ_DIR) rd /s /q $(OBJ_DIR)
+	if exist $(TARGET) del $(TARGET)
+	if exist *.pdb del *.pdb

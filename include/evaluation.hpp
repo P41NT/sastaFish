@@ -7,18 +7,26 @@
 namespace eval {
     static constexpr std::array<int, 6> pieceValues = { 100, 300, 325, 500, 900, 10000 };
 
-    static constexpr std::array<std::array<int, 6>, 6> generate_mvv_lva_table() {
-        std::array<std::array<int, 6>, 6> table{};
+    //static constexpr std::array<std::array<int, 6>, 6> generate_mvv_lva_table() {
+    //    std::array<std::array<int, 6>, 6> table{};
 
-        for (size_t victim = 0; victim < 6; victim++) {
-            for (size_t attacker = 0; attacker < 6; attacker++) {
-                table[victim][attacker] = pieceValues[victim] * 10 - pieceValues[attacker];
-            }
-        }
-        return table;
-    }
+    //    for (size_t victim = 0; victim < 6; victim++) {
+    //        for (size_t attacker = 0; attacker < 6; attacker++) {
+    //            table[victim][attacker] = pieceValues[victim] * 10 - pieceValues[attacker];
+    //        }
+    //    }
+    //    return table;
+    //}
 
-    static constexpr std::array<std::array<int, 6>, 6> MVVLVA = generate_mvv_lva_table();
+    // static constexpr std::array<std::array<int, 6>, 6> MVVLVA = generate_mvv_lva_table();
+    static constexpr std::array<std::array<int, 6>, 6> MVVLVA = { {
+		{{ 100 * 10 - 100, 100 * 10 - 300, 100 * 10 - 325, 100 * 10 - 500, 100 * 10 - 900, 100 * 10 - 10000 }},
+		{{ 300 * 10 - 100, 300 * 10 - 300, 300 * 10 - 325, 300 * 10 - 500, 300 * 10 - 900, 300 * 10 - 10000 }},
+		{{ 325 * 10 - 100, 325 * 10 - 300, 325 * 10 - 325, 325 * 10 - 500, 325 * 10 - 900, 325 * 10 - 10000 }},
+		{{ 500 * 10 - 100, 500 * 10 - 300, 500 * 10 - 325, 500 * 10 - 500, 500 * 10 - 900, 500 * 10 - 10000 }},
+		{{ 900 * 10 - 100, 900 * 10 - 300, 900 * 10 - 325, 900 * 10 - 500, 900 * 10 - 900, 900 * 10 - 10000 }},
+		{{ 10000 * 10 - 100, 10000 * 10 - 300, 10000 * 10 - 325, 10000 * 10 - 500, 10000 * 10 - 900, 10000 * 10 - 10000 }}
+	} };
 
     static const int materialWeight = 1;
     static const int mobilityWeight = 4;
