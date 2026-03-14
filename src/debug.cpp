@@ -68,7 +68,7 @@ namespace debug {
         }
 
         std::stringstream polyglotSS;
-        polyglotSS << std::hex << b.polyglotHash;
+        polyglotSS << std::hex << b.currState.polyglotHash;
 
         std::cerr << "Polyglot Hash : 0x" << polyglotSS.str() << std::endl;
         std::cerr << "Static Evaluation : " << eval::evaluateBoard(b) << std::endl;

@@ -1,5 +1,4 @@
 #include "../include/bitboard.hpp"
-#include <intrin.h>
 
 namespace bitboard {
     bb flipVertical(const bb &in) {

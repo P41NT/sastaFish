@@ -4,18 +4,42 @@
 #include "../include/movegen.hpp"
 #include "../include/ttable.hpp"
 #include "../include/openingbook.hpp"
+#include "../include/zobrist.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <chrono>
 #include <random>
+#include <iostream>
 
 namespace search {
-    int quiesce(Board &b, int alpha, int beta, int depth, std::atomic<bool> &stopSearch, int &nodes) {
+    int quiesce(Board &b, TTable &tt, int alpha, int beta, int depth, bool &stopSearch, int &nodes, timestamp deadline) {
+
+        if ((nodes & 2047) == 0) {
+            if (std::chrono::high_resolution_clock::now() >= deadline) {
+                stopSearch = true;
+            }
+        }
+
         nodes++;
+        TTableEntry *entry = tt.getEntry(b.currState.polyglotHash);
+        Move bestMove;
+        if (entry != nullptr && entry->depth >= depth) {
+            switch (entry->flag) {
+                case EXACT:
+                    return entry->score;
+                case LOWERBOUND:
+                    alpha = std::max(alpha, entry->score);
+                    break;
+                case UPPERBOUND:
+                    beta = std::min(beta, entry->score);
+                    break;
+            }
+            bestMove = entry->bestMove;
+            if (alpha >= beta) return entry->score;
+        }
         int standingPat = eval::evaluateBoard(b);
 
         if (depth == 0) return standingPat;
@@ -25,54 +49,93 @@ namespace search {
 
         int originalAlpha = alpha;
 
-        MoveList legal{};
-        moveGen::genLegalMoves(b, legal);
+        MoveList psuedoLegal{};
+        moveGen::genPsuedoLegalCaptures(b, psuedoLegal);
 
-        if (legal.empty()) {
-            if (b.currState.isInCheck) return -inf;
-            else return 0;
+        std::array<int, 256> scores;
+        for (int i = 0; i < psuedoLegal.size(); i++) {
+            if (psuedoLegal[i].isPromotion()) scores[i] += 50000;
+            if (psuedoLegal[i].isCapture()) scores[i] += eval::mvvlvaScore(psuedoLegal[i], b);
         }
 
-        std::sort(legal.begin(), legal.end(), [&b](Move x, Move y) {
-            return eval::mvvlvaScore(x, b) > eval::mvvlvaScore(y, b);
-        });
-
         static const int delta = 50;
-        
         bool searchCut = false;
-        for (auto &mv : legal) {
-            if (!mv.isCapture()) break;
+        const int psuedoLegalSize = psuedoLegal.size();
+        unsigned legalMovesMade = 0;
+        Color currColor = b.currState.currentPlayer;
 
-            if (eval::pieceValues[b.board[mv.from()].pieceType] + standingPat + delta < alpha) continue;
+        Move bestQMove{};
+        bestQMove.move = 0x0000;
 
-            b.makeMove(mv);
-            int score = -quiesce(b, -beta, -alpha, depth - 1, stopSearch, nodes);
-            b.unMakeMove();
+        for (int i = 0; i < psuedoLegal.size(); i++) {
+            int best_index = std::max_element(scores.begin() + i, scores.begin() + psuedoLegalSize) - scores.begin();
+            int bestScore = scores[best_index];
+
+            std::swap(scores[best_index], scores[i]);
+            std::swap(psuedoLegal[best_index], psuedoLegal[i]);
+
+            if (!(psuedoLegal[i].isPromotion() || psuedoLegal[i].isCapture())) continue;
+
+            Move move = psuedoLegal[i];
+
+            if (move.isCapture()) {
+                PieceType capturedPiece = move.isEnPassant() ? PAWN : b.board[move.to()].pieceType;
+                int capturedVal = eval::pieceValues[capturedPiece];
+                if (standingPat + capturedVal + delta < alpha) continue;
+            }
+
+            if (!b.legalCheck(move)) continue;
+
+            auto prevHash = b.currState.polyglotHash;
+
+            b.makeMove(move);
+			int score = -quiesce(b, tt, -beta, -alpha, depth - 1, stopSearch, nodes, deadline);
+			b.unMakeMove();
+			legalMovesMade++;
 
             if (stopSearch) {
                 searchCut = true;
                 break;
             }
 
-            if (score > alpha) alpha = score;
-            if (alpha >= beta) break;
+            if (score >= beta) return beta;
+            if (score > alpha) {
+                alpha = score;
+                bestQMove = move;
+            }
         }
 
         if (searchCut) return originalAlpha;
 
+        TTableFlag flag = EXACT;
+        if (alpha <= originalAlpha) flag = UPPERBOUND;
+
+        tt.setEntry(b.currState.polyglotHash, 0, alpha, flag, bestQMove);
+
         return alpha;
     }
 
-    int alphaBetaSearch(Board &b, TTable &tt, RepetitionTable &rt, int alpha, int beta, int depth, 
-            int &nodes, std::atomic<bool> &stopSearch) {
+    int alphaBetaSearch(Board &b, TTable &tt, RepetitionTable &rt, int alpha, int beta, int depth, int &nodes, bool &stopSearch, timestamp deadline) { 
         nodes++;
 
-        if (rt.getEntry(b.polyglotHash) >= 2) { 
+        if ((nodes & 2047) == 0) {
+            if (std::chrono::high_resolution_clock::now() >= deadline) {
+                stopSearch = true;
+            }
+        }
+
+        if (stopSearch) return 0;
+
+        if (rt.getEntry(b.currState.polyglotHash) >= 2) { 
             return 0; 
         }
 
-        TTableEntry *entry = tt.getEntry(b.polyglotHash);
-        Move bestMove;
+        auto originalHash = b.currState.polyglotHash;
+
+        TTableEntry *entry = tt.getEntry(b.currState.polyglotHash);
+        Move bestMove{};
+        bestMove.move = 0x0000;
+
         if (entry != nullptr && entry->depth >= depth) {
             switch (entry->flag) {
                 case EXACT:
@@ -90,40 +153,61 @@ namespace search {
 
         int originalAlpha = alpha;
 
-        MoveList legalMoves;
-        moveGen::genLegalMoves(b, legalMoves);
-
-        if (legalMoves.empty()) {
-            if (b.currState.isInCheck) return -inf;
-            else return 0;
-        }
-
-        // std::sort(legalMoves.begin(), legalMoves.end(), [&b](Move x, Move y) {
-        //     return eval::mvvlvaScore(x, b) > eval::mvvlvaScore(y, b);
-        // });
-
-        bool searchCut = false;
-
         if (depth == 0) {
-            int result = quiesce(b, alpha, beta, 10, stopSearch, nodes);
+            nodes--;
+            int result = quiesce(b, tt, alpha, beta, 10, stopSearch, nodes, deadline);
             if (stopSearch) 
                 return originalAlpha;
             return result;
         }
 
-        for (auto mv : legalMoves) {
-            // if (mv.isCapture()) {
-            //     int seeVal = eval::staticExchange(b, mv.to()) - 
-            //         eval::pieceValues[b.board[mv.to()].pieceType];
-            //     if (seeVal < 0) continue;
-            // }
-            
-            if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
+        MoveList psuedoLegal;
+        //moveGen::genLegalMoves(b, psuedoLegal);
+        // right now no castling
+        moveGen::genPsuedoLegalMoves(b, psuedoLegal);
 
+        //if (psuedoLegal.empty()) {
+        //    if (b.currState.isInCheck) return -inf;
+        //    else return 0;
+        //}
+
+        bool searchCut = false;
+
+        const Color currColor = b.currState.currentPlayer;
+        unsigned int legalMovesPlayed = 0;
+
+        std::array<int, 256> scores;
+        for (int i = 0; i < psuedoLegal.size(); i++) {
+            scores[i] = 0;
+            if (psuedoLegal[i] == bestMove) scores[i] = 1000000;
+            if (psuedoLegal[i].isPromotion()) {
+                if (psuedoLegal[i].promotionPiece() == QUEEN)
+                    scores[i] += 50000;
+                else scores[i] -= 50000;
+            }
+            if (psuedoLegal[i].isCapture()) scores[i] += eval::mvvlvaScore(psuedoLegal[i], b);
+        }
+
+        const int psuedoLegalSize = psuedoLegal.size();
+
+        for (int i = 0; i < psuedoLegal.size(); i++) {
+            // selection sort
+            int best_index = std::max_element(scores.begin() + i, scores.begin() + psuedoLegalSize) - scores.begin();
+            int bestScore = scores[best_index];
+
+            std::swap(scores[best_index], scores[i]);
+            std::swap(psuedoLegal[best_index], psuedoLegal[i]);
+
+            Move mv = psuedoLegal[i];
+
+            // new legal check function not tested yet
+            if (!b.legalCheck(mv)) continue;
+
+			legalMovesPlayed++;
             b.makeMove(mv);
-            rt.increment(b.polyglotHash);
-            int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-            rt.decrement(b.polyglotHash);
+			rt.increment(b.currState.polyglotHash);
+			int score = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, deadline);
+			rt.decrement(b.currState.polyglotHash);
             b.unMakeMove();
 
             if (stopSearch) {
@@ -144,11 +228,16 @@ namespace search {
             return originalAlpha;
         }
 
+        if (legalMovesPlayed == 0) {
+            if (b.currState.isInCheck) return -inf;
+            else return 0;
+        }
+
         TTableFlag flag = EXACT;
         if (alpha <= originalAlpha) flag = UPPERBOUND;
         else if (alpha >= beta) flag = LOWERBOUND;
 
-        tt.setEntry(b.polyglotHash, depth, alpha, flag, bestMove);
+        tt.setEntry(b.currState.polyglotHash, depth, alpha, flag, bestMove);
         return alpha;
     }
 
@@ -158,7 +247,7 @@ namespace search {
         auto seed = static_cast<std::mt19937::result_type>(std::chrono::steady_clock::now().time_since_epoch().count());
         std::mt19937 rng(seed);
 
-        auto entries = bk.getEntries(b.polyglotHash);
+        auto entries = bk.getEntries(b.currState.polyglotHash);
         if (entries.size() != 0) {
             size_t limit = std::min<size_t>(entries.size(), 5);
             size_t nextMove = rng() % limit;
@@ -168,8 +257,7 @@ namespace search {
         return result;
     }
 
-    Move iterativeDeepening(Board &b, TTable &tt, RepetitionTable &rt, int maxDepth, int maxTime, 
-            int &nodes, int &depth, int &score) {
+    Move iterativeDeepening(Board &b, TTable &tt, RepetitionTable &rt, int maxDepth, int maxTime, int &nodes, int &depth, int &score) {
 
         Move bestMove;
         int bestValue = -inf;
@@ -179,16 +267,16 @@ namespace search {
 
         nodes = 0;
 
-        std::atomic<bool> stopSearch = false;
-        std::mutex mtx;
-        std::condition_variable conditionVar;
+        bool stopSearch = false;
+        //std::mutex mtx;
+        //std::condition_variable conditionVar;
 
-        std::thread searchThread([&]() {
-            std::unique_lock<std::mutex> lock(mtx);
-            if (!conditionVar.wait_until(lock, deadline, [&]() { return stopSearch.load(); })) {
-                stopSearch = true;
-            }
-        });
+        //std::thread searchThread([&]() {
+        //    std::unique_lock<std::mutex> lock(mtx);
+        //    if (!conditionVar.wait_until(lock, deadline, [&]() { return stopSearch.load(); })) {
+        //        stopSearch = true;
+        //    }
+        //});
 
         MoveList legalmoves;
         moveGen::genLegalMoves(b, legalmoves);
@@ -198,14 +286,13 @@ namespace search {
 
             int alpha = -inf - 1;
             int beta = inf + 1;
-
             bool searchCut = false;
 
-            if (iterBestMove.move != 0000) {
+            if (iterBestMove.move != 0x0000) {
                 b.makeMove(iterBestMove);
-                rt.increment(b.polyglotHash);
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-                rt.decrement(b.polyglotHash);
+                rt.increment(b.currState.polyglotHash);
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, deadline);
+                rt.decrement(b.currState.polyglotHash);
                 b.unMakeMove();
 
                 if (stopSearch) {
@@ -217,12 +304,14 @@ namespace search {
             }
 
             for (const auto &mv : legalmoves) {
+                if (mv == iterBestMove) continue;
+
                 if (mv.isPromotion() && mv.promotionPiece() != QUEEN) continue;
 
                 b.makeMove(mv);
-                rt.increment(b.polyglotHash);
-                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch);
-                rt.decrement(b.polyglotHash);
+                rt.increment(b.currState.polyglotHash);
+                int eval = -alphaBetaSearch(b, tt, rt, -beta, -alpha, depth - 1, nodes, stopSearch, deadline);
+                rt.decrement(b.currState.polyglotHash);
                 b.unMakeMove();
 
 
@@ -237,17 +326,16 @@ namespace search {
                 }
             }
 
-            if (!searchCut) {
+            if (!searchCut && !stopSearch) {
                 bestValue = alpha;
                 bestMove = iterBestMove;
+
+                tt.setEntry(b.currState.polyglotHash, depth, bestValue, EXACT, bestMove);
             }
             if (stopSearch) break;
-
         }
 
         stopSearch = true;
-        conditionVar.notify_one();
-        searchThread.join();
         depth--;
 
         score = bestValue;

@@ -5,6 +5,10 @@
 #include "../include/colors.hpp"
 #include "../include/openingbook.hpp"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #include <iostream>
 
 void printBanner() {
@@ -31,6 +35,12 @@ void printBanner() {
 }
 
 int main() {
+
+	#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+	#endif // _WIN32
+
+
     printBanner();
 
     moveGen::init();
@@ -40,6 +50,7 @@ int main() {
     TTable *tt = new TTable();
     RepetitionTable *rt = new RepetitionTable();
     book::Book *bk = new book::Book("C:\\Users\\shawn\\source\\repos\\sastaFish\\data\\Human.bin");
+    //book::Book* bk = new book::Book("data/Human.bin");
 
     uci::uciLoop(*b, *tt, *rt, *bk);
 

@@ -108,8 +108,8 @@ namespace uci {
         if (option == "startpos") {
             static std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
             b.setFEN(defaultFEN);
-            rt.increment(b.polyglotHash);
-            initialStack.push(b.polyglotHash);
+            rt.increment(b.currState.polyglotHash);
+            initialStack.push(b.currState.polyglotHash);
         }
         else if (option == "fen") {
             std::string FEN; 
@@ -125,8 +125,8 @@ namespace uci {
             std::string move;
             while (iss >> move) {
                 b.makeMove(parseMove(b, move));
-                rt.increment(b.polyglotHash);
-                initialStack.push(b.polyglotHash);
+                rt.increment(b.currState.polyglotHash);
+                initialStack.push(b.currState.polyglotHash);
             }
         }
     }
@@ -155,6 +155,7 @@ namespace uci {
         }
         else if (option == "movetime") {
             iss >> maxTime;
+            maxTime -= 10;
         }
         else if (option == "wtime") {
             if (b.currState.currentPlayer == WHITE) {

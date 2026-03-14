@@ -23,6 +23,9 @@ struct MoveList {
     inline const Move& operator[](size_t index) const {
         return moves[index];
     }
+    inline Move& operator[](size_t index) {
+        return moves[index];
+    }
 
     template<typename... Args>
     inline void emplace_back(Args&&... args) {
@@ -62,4 +65,5 @@ namespace moveGen {
 
     void genPsuedoLegalMoves(Board &board, MoveList& movelist);
     void genLegalMoves(Board &board, MoveList& movelist);
+    void genPsuedoLegalCaptures(Board& board, MoveList& movelist);
 }

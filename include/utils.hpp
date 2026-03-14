@@ -75,10 +75,21 @@ enum castlingRights : int {
     CASTLE_QUEEN_BLACK = 8
 };
 
+#ifdef _WIN32
+
+const std::string pieceCharacters[2][6] = {
+    { "P", "N", "B", "R", "Q", "K" },
+    { "p", "n", "b", "r", "q", "k" }
+};
+
+#else
+
 const std::string pieceCharacters[2][6] = {
     { u8"♟", u8"♞", u8"♝", u8"♜", u8"♛", u8"♚" },
     { u8"♙", u8"♘", u8"♗", u8"♖", u8"♕", u8"♔" }
 };
+
+#endif // _WIN32
 
 const std::string pieceLetters[2][6] = {
     { "P", "N", "B", "R", "Q", "K" },
